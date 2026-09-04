@@ -437,6 +437,22 @@
   }
   .home-btn:hover{ border-color:var(--accent); transform:translateY(-1px); }
 
+  .admin-nav-btn{
+    background:var(--accent);
+    border:1px solid var(--accent);
+    color:var(--accent-ink);
+    padding:8px 16px;
+    border-radius:9px;
+    font-size:13px;
+    font-weight:700;
+    cursor:pointer;
+    font-family:inherit;
+    display:flex; align-items:center; gap:6px;
+    transition:transform .12s ease, box-shadow .15s ease;
+  }
+  .admin-nav-btn:hover{ transform:translateY(-1px); box-shadow:0 4px 14px rgba(var(--glass-rgb),.35); }
+  .admin-nav-btn.active{ background:var(--panel2); color:var(--accent); border-color:var(--accent); }
+
   .topbar-right{ display:flex; align-items:center; gap:10px; }
 
   /* ===== Hub screen: pick which tool to use ===== */
@@ -1563,6 +1579,7 @@
     <div class="topbar">
       <div class="breadcrumb" id="breadcrumb">PHOTOISM 헬퍼</div>
       <div class="topbar-right">
+        <button class="admin-nav-btn" id="adminDashBtn" style="display:none;" title="관리자 대시보드">📊 관리자</button>
         <span id="userInfo" style="display:none; font-size:12px; color:var(--muted); margin-right:4px;"></span>
         <button class="home-btn" id="logoutBtn" style="display:none;" title="로그아웃">🚪</button>
         <button class="home-btn" id="homeBtn" style="display:none;" title="도구 홈으로">🏠</button>
@@ -1612,13 +1629,21 @@ async function loadProfile(user){
 function updateUserInfoBar(){
   const info = document.getElementById('userInfo');
   const logoutBtn = document.getElementById('logoutBtn');
+  const adminBtn = document.getElementById('adminDashBtn');
   if (currentUser) {
     info.style.display = 'inline';
     info.textContent = currentUser.displayName + (currentUser.role === 'admin' ? ' (관리자)' : '');
     logoutBtn.style.display = 'inline-block';
+    if (currentUser.role === 'admin') {
+      adminBtn.style.display = 'flex';
+      adminBtn.classList.toggle('active', appState === 'adminDashboard');
+    } else {
+      adminBtn.style.display = 'none';
+    }
   } else {
     info.style.display = 'none';
     logoutBtn.style.display = 'none';
+    adminBtn.style.display = 'none';
   }
 }
 
@@ -1673,6 +1698,12 @@ async function logEvent(eventType, extra){
 document.getElementById('logoutBtn').addEventListener('click', (e)=>{
   addRipple(e.currentTarget, e);
   handleLogout();
+});
+
+document.getElementById('adminDashBtn').addEventListener('click', (e)=>{
+  addRipple(e.currentTarget, e);
+  petSay('nav');
+  goToAdminDashboard();
 });
 
 /* ============================= DATA ============================= */
@@ -2212,9 +2243,6 @@ const HUB_HTML = `<div class="brand-split-screen">
       <div class="bp-sub">스내피즘</div>
     </button>
 
-  </div>
-  <div id="adminEntryWrap" style="display:none; margin-top:24px; text-align:center;">
-    <button id="adminEntryBtn" class="mono" style="background:none; border:1px solid var(--border); color:var(--muted); border-radius:10px; padding:9px 18px; font-size:13px; cursor:pointer;">📊 관리자 대시보드</button>
   </div>
 </div>`;
 
@@ -3108,10 +3136,6 @@ function renderHubScreen(){
   document.getElementById('breadcrumb').innerHTML = 'PHOTOISM 헬퍼';
   document.getElementById('brandPhotoism').onclick = (e)=>{ addRipple(e.currentTarget, e); petSay('nav'); goToPicker(); };
   document.getElementById('brandSnapism').onclick = (e)=>{ addRipple(e.currentTarget, e); petSay('nav'); goToSnapismPicker(); };
-  if (currentUser && currentUser.role === 'admin') {
-    document.getElementById('adminEntryWrap').style.display = 'block';
-    document.getElementById('adminEntryBtn').onclick = (e)=>{ addRipple(e.currentTarget, e); goToAdminDashboard(); };
-  }
 }
 
 function goToAdminDashboard(){
@@ -3526,6 +3550,7 @@ function updateResetButton(){
   const homeBtn = document.getElementById('homeBtn');
   homeBtn.style.display = (appState === 'hub' || appState === 'login') ? 'none' : 'flex';
   homeBtn.onclick = (e)=>{ addRipple(e.currentTarget, e); goToHub(); };
+  updateUserInfoBar();
 
   if(appState==='symptoms'){
     resetBtn.style.display = 'inline-block';
