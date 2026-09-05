@@ -3182,6 +3182,15 @@ function renderAdminDashboardContent(events, profiles){
   const deviceRows = Object.entries(deviceCounts).sort((a,b)=>b[1]-a[1]);
   const maxDeviceCount = deviceRows.length ? deviceRows[0][1] : 1;
 
+  // 증상별 클릭수 (발생 빈도)
+  const symptomClickCounts = {};
+  symptomClicks.forEach(e => {
+    const key = e.symptom_id || '(알수없음)';
+    symptomClickCounts[key] = (symptomClickCounts[key] || 0) + 1;
+  });
+  const symptomClickRows = Object.entries(symptomClickCounts).sort((a,b)=>b[1]-a[1]);
+
+  // 증상별 해결/미해결 통계
   const symptomStats = {};
   outcomes.forEach(e => {
     const key = e.symptom_id || '(알수없음)';
@@ -3200,12 +3209,71 @@ function renderAdminDashboardContent(events, profiles){
   });
   const userRows = Object.entries(userCounts).sort((a,b)=>b[1]-a[1]);
 
+  // 전체 해결률 / 미해결률
+  const totalOutcomes = outcomes.length;
+  const totalSolved = outcomes.filter(e=>e.outcome==='solved').length;
+  const totalUnresolved = totalOutcomes - totalSolved;
+  const overallSolvedRate = totalOutcomes ? Math.round(totalSolved/totalOutcomes*100) : 0;
+  const overallUnresolvedRate = totalOutcomes ? 100 - overallSolvedRate : 0;
+
+  // 이번주 vs 지난주 (월요일 시작 기준)
+  function getWeekStart(d){
+    const date = new Date(d);
+    const day = date.getDay();
+    const diff = (day === 0 ? -6 : 1) - day;
+    date.setDate(date.getDate() + diff);
+    date.setHours(0,0,0,0);
+    return date;
+  }
+  const now = new Date();
+  const thisWeekStart = getWeekStart(now);
+  const lastWeekStart = new Date(thisWeekStart); lastWeekStart.setDate(lastWeekStart.getDate() - 7);
+  const thisWeekCount = events.filter(e => new Date(e.created_at) >= thisWeekStart).length;
+  const lastWeekCount = events.filter(e => { const t = new Date(e.created_at); return t >= lastWeekStart && t < thisWeekStart; }).length;
+  const weekMax = Math.max(thisWeekCount, lastWeekCount, 1);
+  let trendText, trendClass;
+  if (lastWeekCount === 0) {
+    trendText = thisWeekCount > 0 ? '신규' : '-';
+    trendClass = '';
+  } else {
+    const pct = Math.round((thisWeekCount - lastWeekCount) / lastWeekCount * 100);
+    trendText = (pct >= 0 ? '▲ +' : '▼ ') + pct + '%';
+    trendClass = pct >= 0 ? 'admin-rate-good' : 'admin-rate-bad';
+  }
+
   const summaryHtml =
     '<div class="admin-summary">' +
       '<div class="admin-summary-card"><div class="num">'+events.length+'</div><div class="label">전체 기록</div></div>' +
       '<div class="admin-summary-card"><div class="num">'+profiles.length+'</div><div class="label">가입 인원</div></div>' +
-      '<div class="admin-summary-card"><div class="num">'+symptomClicks.length+'</div><div class="label">증상 조회 수</div></div>' +
-      '<div class="admin-summary-card"><div class="num">'+outcomes.filter(e=>e.outcome==='solved').length+'</div><div class="label">해결 완료</div></div>' +
+      '<div class="admin-summary-card"><div class="num admin-rate-good">'+overallSolvedRate+'%</div><div class="label">전체 해결 완료율</div></div>' +
+      '<div class="admin-summary-card"><div class="num admin-rate-bad">'+overallUnresolvedRate+'%</div><div class="label">전체 미해결률</div></div>' +
+    '</div>';
+
+  // Top 5 증상 랭킹
+  const medals = ['🥇','🥈','🥉','4위','5위'];
+  const top5 = symptomClickRows.slice(0,5);
+  const top5Html = top5.length ?
+    '<table class="admin-table"><thead><tr><th></th><th>증상</th><th>클릭수</th></tr></thead><tbody>' +
+    top5.map(([sid, count], i) => {
+      const label = (typeof SYMPTOM_LABEL !== 'undefined' && SYMPTOM_LABEL[sid]) ? SYMPTOM_LABEL[sid] : '';
+      return '<tr><td style="font-size:15px;">'+medals[i]+'</td><td>'+sid+(label ? ' <span style="color:var(--muted); font-size:11.5px;">'+label+'</span>' : '')+'</td><td>'+count+'</td></tr>';
+    }).join('') + '</tbody></table>'
+    : '<div class="admin-empty">아직 기록이 없어요.</div>';
+
+  // 기간별 추이
+  const trendHtml =
+    '<div style="display:flex; align-items:flex-end; gap:24px; padding:10px 4px 4px;">' +
+      '<div style="text-align:center;">' +
+        '<div style="height:70px; display:flex; align-items:flex-end;"><div style="width:44px; background:var(--border); border-radius:6px 6px 0 0; height:'+Math.max(6,Math.round(lastWeekCount/weekMax*70))+'px;"></div></div>' +
+        '<div style="font-size:12px; color:var(--muted); margin-top:6px;">지난주</div>' +
+        '<div style="font-size:14px; font-weight:700;">'+lastWeekCount+'</div>' +
+      '</div>' +
+      '<div style="text-align:center;">' +
+        '<div style="height:70px; display:flex; align-items:flex-end;"><div style="width:44px; background:var(--accent); border-radius:6px 6px 0 0; height:'+Math.max(6,Math.round(thisWeekCount/weekMax*70))+'px;"></div></div>' +
+        '<div style="font-size:12px; color:var(--muted); margin-top:6px;">이번주</div>' +
+        '<div style="font-size:14px; font-weight:700;">'+thisWeekCount+'</div>' +
+      '</div>' +
+      '<div style="align-self:center; font-size:16px;" class="'+trendClass+'">'+trendText+'</div>' +
     '</div>';
 
   const deviceTableHtml = deviceRows.length ?
@@ -3216,14 +3284,17 @@ function renderAdminDashboardContent(events, profiles){
     : '<div class="admin-empty">아직 기록이 없어요.</div>';
 
   const symptomTableHtml = symptomRows.length ?
-    '<table class="admin-table"><thead><tr><th>증상</th><th>총 건수</th><th>해결</th><th>담당자연결</th><th>A/S</th><th>해결률</th></tr></thead><tbody>' +
+    '<table class="admin-table"><thead><tr><th>증상</th><th>클릭수</th><th>총 조치건수</th><th>해결</th><th>미해결(담당자·A/S)</th><th>해결률</th><th>미해결률</th></tr></thead><tbody>' +
     symptomRows.map(([sid, s]) => {
       const rate = s.total ? Math.round(s.solved / s.total * 100) : 0;
+      const unresolvedRate = s.total ? 100 - rate : 0;
       const label = (typeof SYMPTOM_LABEL !== 'undefined' && SYMPTOM_LABEL[sid]) ? SYMPTOM_LABEL[sid] : '';
       const rateClass = rate >= 60 ? 'admin-rate-good' : (rate < 30 ? 'admin-rate-bad' : '');
+      const unresolvedClass = unresolvedRate >= 60 ? 'admin-rate-bad' : (unresolvedRate < 30 ? 'admin-rate-good' : '');
       return '<tr><td>'+sid+(label ? ' <span style="color:var(--muted); font-size:11.5px;">'+label+'</span>' : '')+'</td>' +
-        '<td>'+s.total+'</td><td>'+s.solved+'</td><td>'+s.escalate+'</td><td>'+s.as+'</td>' +
-        '<td class="'+rateClass+'">'+rate+'%</td></tr>';
+        '<td>'+(symptomClickCounts[sid]||0)+'</td>' +
+        '<td>'+s.total+'</td><td>'+s.solved+'</td><td>'+(s.escalate+s.as)+'</td>' +
+        '<td class="'+rateClass+'">'+rate+'%</td><td class="'+unresolvedClass+'">'+unresolvedRate+'%</td></tr>';
     }).join('') + '</tbody></table>'
     : '<div class="admin-empty">아직 해결 결과 기록이 없어요.</div>';
 
@@ -3239,9 +3310,11 @@ function renderAdminDashboardContent(events, profiles){
       '<div class="hub-title">📊 관리자 대시보드</div>' +
       '<div class="hub-sub">전체 사용 현황을 확인할 수 있어요.</div>' +
       summaryHtml +
-      '<div class="admin-section-title">👤 직원별 활동</div>' + userTableHtml +
+      '<div class="admin-section-title">📈 기간별 추이 (이번주 vs 지난주)</div>' + trendHtml +
+      '<div class="admin-section-title">🏆 자주 발생하는 증상 Top 5</div>' + top5Html +
+      '<div class="admin-section-title">🩺 증상별 클릭수 · 해결률 · 미해결률</div>' + symptomTableHtml +
       '<div class="admin-section-title">📍 부위/섹터별 클릭수</div>' + deviceTableHtml +
-      '<div class="admin-section-title">🩺 증상별 해결률</div>' + symptomTableHtml +
+      '<div class="admin-section-title">👤 직원별 활동</div>' + userTableHtml +
     '</div>';
 }
 
