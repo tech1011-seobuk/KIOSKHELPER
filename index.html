@@ -530,6 +530,32 @@
   .admin-rate-good{ color:#7cc576; font-weight:700; }
   .admin-rate-bad{ color:#e07a7a; font-weight:700; }
   .admin-empty{ color:var(--muted); font-size:13px; padding:20px 0; text-align:center; }
+  .admin-export-btn{
+    background:var(--panel2); border:1px solid var(--border); color:var(--text);
+    border-radius:9px; padding:8px 15px; font-size:12.5px; cursor:pointer; font-family:inherit;
+    display:inline-flex; align-items:center; gap:6px;
+  }
+  .admin-export-btn:hover{ border-color:var(--accent); color:var(--accent); }
+  .admin-recent-item{
+    display:flex; justify-content:space-between; align-items:center; gap:10px;
+    padding:10px 12px; border-bottom:1px solid var(--border); font-size:13px;
+  }
+  .admin-recent-item:last-child{ border-bottom:none; }
+  .admin-recent-tag{
+    font-size:11px; padding:2px 8px; border-radius:20px; font-weight:700; white-space:nowrap;
+  }
+  .admin-recent-tag.escalate{ background:rgba(220,140,80,.18); color:#e0a256; }
+  .admin-recent-tag.as{ background:rgba(220,80,80,.18); color:#e07a7a; }
+  .admin-brand-compare{ display:flex; gap:16px; }
+  .admin-brand-card{
+    flex:1; background:rgba(var(--glass-rgb),.7); border:1px solid var(--border);
+    border-radius:12px; padding:16px; text-align:center;
+  }
+  .admin-brand-card .num{ font-size:26px; font-weight:800; color:var(--accent); }
+  .admin-inactive-chip{
+    display:inline-block; background:var(--panel2); border:1px solid var(--border);
+    border-radius:20px; padding:5px 12px; font-size:12.5px; margin:3px 4px 3px 0; color:var(--muted);
+  }
   .tool-card-grid{
     display:grid; grid-template-columns:1fr 1fr; gap:16px;
   }
@@ -3209,6 +3235,73 @@ function renderAdminDashboardContent(events, profiles){
   });
   const userRows = Object.entries(userCounts).sort((a,b)=>b[1]-a[1]);
 
+  // 활동 없는 직원
+  const inactiveProfiles = profiles.filter(p => !userCounts[p.id]);
+
+  // 브랜드별 비교
+  const brandCounts = { photoism: 0, snapism: 0 };
+  events.forEach(e => {
+    if (e.brand === 'photoism') brandCounts.photoism++;
+    else if (e.brand === 'snapism') brandCounts.snapism++;
+  });
+
+  // 시간대별 발생 패턴 (4구간)
+  const timeBuckets = { '새벽 (00-06시)':0, '오전 (06-12시)':0, '오후 (12-18시)':0, '저녁 (18-24시)':0 };
+  events.forEach(e => {
+    const h = new Date(e.created_at).getHours();
+    if (h < 6) timeBuckets['새벽 (00-06시)']++;
+    else if (h < 12) timeBuckets['오전 (06-12시)']++;
+    else if (h < 18) timeBuckets['오후 (12-18시)']++;
+    else timeBuckets['저녁 (18-24시)']++;
+  });
+  const timeMax = Math.max(...Object.values(timeBuckets), 1);
+
+  // 기기별 A/S 필요율
+  const deviceOutcomeStats = {};
+  outcomes.forEach(e => {
+    const key = e.device || '(알수없음)';
+    if (!deviceOutcomeStats[key]) deviceOutcomeStats[key] = { as:0, total:0 };
+    deviceOutcomeStats[key].total++;
+    if (e.outcome === 'as') deviceOutcomeStats[key].as++;
+  });
+  const deviceAsRows = Object.entries(deviceOutcomeStats)
+    .map(([name, s]) => [name, s.as, s.total, s.total ? Math.round(s.as/s.total*100) : 0])
+    .sort((a,b)=>b[3]-a[3]);
+
+  // 미해결 최근 건 리스트 (담당자연결/A·S, 최근 10건)
+  const recentUnresolved = outcomes
+    .filter(e => e.outcome === 'escalate' || e.outcome === 'as')
+    .sort((a,b)=> new Date(b.created_at) - new Date(a.created_at))
+    .slice(0, 10);
+
+  // 평균 해결 소요시간 (증상클릭 → 해결 완료, 같은 사용자+증상 기준으로 가장 가까운 클릭과 매칭)
+  const clicksBySymptomUser = {};
+  symptomClicks.forEach(e => {
+    const key = e.user_id + '|' + e.symptom_id;
+    if (!clicksBySymptomUser[key]) clicksBySymptomUser[key] = [];
+    clicksBySymptomUser[key].push(new Date(e.created_at));
+  });
+  const solvedDurations = [];
+  outcomes.filter(e => e.outcome === 'solved').forEach(e => {
+    const key = e.user_id + '|' + e.symptom_id;
+    const clickTimes = clicksBySymptomUser[key];
+    if (!clickTimes || !clickTimes.length) return;
+    const outcomeTime = new Date(e.created_at);
+    const priorClicks = clickTimes.filter(t => t <= outcomeTime);
+    if (!priorClicks.length) return;
+    const nearestClick = new Date(Math.max(...priorClicks.map(t=>t.getTime())));
+    const diffMs = outcomeTime - nearestClick;
+    if (diffMs >= 0 && diffMs < 1000*60*60) { solvedDurations.push(diffMs); } // 1시간 이내만 유효 데이터로 간주
+  });
+  const avgDurationMs = solvedDurations.length ? solvedDurations.reduce((a,b)=>a+b,0)/solvedDurations.length : null;
+  function formatDuration(ms){
+    if (ms === null) return '-';
+    const totalSec = Math.round(ms/1000);
+    const min = Math.floor(totalSec/60);
+    const sec = totalSec%60;
+    return min > 0 ? min+'분 '+sec+'초' : sec+'초';
+  }
+
   // 전체 해결률 / 미해결률
   const totalOutcomes = outcomes.length;
   const totalSolved = outcomes.filter(e=>e.outcome==='solved').length;
@@ -3247,6 +3340,7 @@ function renderAdminDashboardContent(events, profiles){
       '<div class="admin-summary-card"><div class="num">'+profiles.length+'</div><div class="label">가입 인원</div></div>' +
       '<div class="admin-summary-card"><div class="num admin-rate-good">'+overallSolvedRate+'%</div><div class="label">전체 해결 완료율</div></div>' +
       '<div class="admin-summary-card"><div class="num admin-rate-bad">'+overallUnresolvedRate+'%</div><div class="label">전체 미해결률</div></div>' +
+      '<div class="admin-summary-card"><div class="num">'+formatDuration(avgDurationMs)+'</div><div class="label">평균 해결 소요시간</div></div>' +
     '</div>';
 
   // Top 5 증상 랭킹
@@ -3305,17 +3399,102 @@ function renderAdminDashboardContent(events, profiles){
     ).join('') + '</tbody></table>'
     : '<div class="admin-empty">아직 기록이 없어요.</div>';
 
+  // 브랜드별 비교
+  const brandHtml =
+    '<div class="admin-brand-compare">' +
+      '<div class="admin-brand-card"><div class="num">'+brandCounts.photoism+'</div><div class="label">포토이즘</div></div>' +
+      '<div class="admin-brand-card"><div class="num">'+brandCounts.snapism+'</div><div class="label">스내피즘</div></div>' +
+    '</div>';
+
+  // 시간대별 발생 패턴
+  const timeHtml =
+    '<div style="display:flex; align-items:flex-end; gap:16px; padding:10px 4px 4px;">' +
+    Object.entries(timeBuckets).map(([label, count]) =>
+      '<div style="text-align:center; flex:1;">' +
+        '<div style="height:70px; display:flex; align-items:flex-end; justify-content:center;"><div style="width:36px; background:var(--accent); border-radius:6px 6px 0 0; height:'+Math.max(4,Math.round(count/timeMax*70))+'px;"></div></div>' +
+        '<div style="font-size:11px; color:var(--muted); margin-top:6px;">'+label+'</div>' +
+        '<div style="font-size:13px; font-weight:700;">'+count+'</div>' +
+      '</div>'
+    ).join('') +
+    '</div>';
+
+  // 기기별 A/S 필요율
+  const deviceAsHtml = deviceAsRows.length ?
+    '<table class="admin-table"><thead><tr><th>기기</th><th>A/S 건수</th><th>전체 조치건수</th><th>A/S 필요율</th></tr></thead><tbody>' +
+    deviceAsRows.map(([name, asCount, total, rate]) => {
+      const rateClass = rate >= 40 ? 'admin-rate-bad' : '';
+      return '<tr><td>'+name+'</td><td>'+asCount+'</td><td>'+total+'</td><td class="'+rateClass+'">'+rate+'%</td></tr>';
+    }).join('') + '</tbody></table>'
+    : '<div class="admin-empty">아직 A/S 관련 기록이 없어요.</div>';
+
+  // 미해결 최근 건 리스트
+  const recentUnresolvedHtml = recentUnresolved.length ?
+    recentUnresolved.map(e => {
+      const label = (typeof SYMPTOM_LABEL !== 'undefined' && SYMPTOM_LABEL[e.symptom_id]) ? SYMPTOM_LABEL[e.symptom_id] : (e.symptom_id||'');
+      const tagClass = e.outcome === 'as' ? 'as' : 'escalate';
+      const tagText = e.outcome === 'as' ? 'A/S 필요' : '담당자 연결';
+      const when = new Date(e.created_at).toLocaleString('ko-KR', {month:'numeric', day:'numeric', hour:'2-digit', minute:'2-digit'});
+      return '<div class="admin-recent-item">' +
+        '<div><b>'+(profileMap[e.user_id] || '(알수없음)')+'</b> · '+(e.device||'')+' · '+label+'<div style="color:var(--muted); font-size:11.5px;">'+when+'</div></div>' +
+        '<span class="admin-recent-tag '+tagClass+'">'+tagText+'</span>' +
+      '</div>';
+    }).join('')
+    : '<div class="admin-empty">미해결로 남은 최근 건이 없어요.</div>';
+
+  // 활동 없는 직원
+  const inactiveHtml = inactiveProfiles.length ?
+    inactiveProfiles.map(p => '<span class="admin-inactive-chip">'+(p.display_name || p.email)+'</span>').join('')
+    : '<div class="admin-empty">모든 직원이 한 번 이상 사용했어요.</div>';
+
   area.innerHTML =
     '<div class="admin-screen">' +
-      '<div class="hub-title">📊 관리자 대시보드</div>' +
-      '<div class="hub-sub">전체 사용 현황을 확인할 수 있어요.</div>' +
+      '<div style="display:flex; justify-content:space-between; align-items:flex-start; flex-wrap:wrap; gap:10px;">' +
+        '<div><div class="hub-title">📊 관리자 대시보드</div><div class="hub-sub">전체 사용 현황을 확인할 수 있어요.</div></div>' +
+        '<button class="admin-export-btn" id="csvExportBtn">⬇ CSV로 내보내기</button>' +
+      '</div>' +
       summaryHtml +
       '<div class="admin-section-title">📈 기간별 추이 (이번주 vs 지난주)</div>' + trendHtml +
+      '<div class="admin-section-title">🏬 브랜드별 비교</div>' + brandHtml +
+      '<div class="admin-section-title">🕐 시간대별 발생 패턴</div>' + timeHtml +
       '<div class="admin-section-title">🏆 자주 발생하는 증상 Top 5</div>' + top5Html +
       '<div class="admin-section-title">🩺 증상별 클릭수 · 해결률 · 미해결률</div>' + symptomTableHtml +
+      '<div class="admin-section-title">🔧 기기별 A/S 필요율</div>' + deviceAsHtml +
       '<div class="admin-section-title">📍 부위/섹터별 클릭수</div>' + deviceTableHtml +
+      '<div class="admin-section-title">⏳ 미해결로 남은 최근 건</div>' +
+      '<div style="background:rgba(var(--glass-rgb),.7); border:1px solid var(--border); border-radius:12px; overflow:hidden;">' + recentUnresolvedHtml + '</div>' +
       '<div class="admin-section-title">👤 직원별 활동</div>' + userTableHtml +
+      '<div class="admin-section-title">💤 활동 없는 직원</div><div>' + inactiveHtml + '</div>' +
     '</div>';
+
+  document.getElementById('csvExportBtn').onclick = ()=> exportEventsToCSV(events, profileMap);
+}
+
+function exportEventsToCSV(events, profileMap){
+  const headers = ['일시','직원','종류','브랜드','기기','증상ID','결과'];
+  const typeLabel = { device_click:'부위클릭', symptom_click:'증상클릭', symptom_outcome:'결과' };
+  const outcomeLabel = { solved:'해결', escalate:'담당자연결', as:'A/S필요' };
+  const rows = events.map(e => [
+    new Date(e.created_at).toLocaleString('ko-KR'),
+    profileMap[e.user_id] || '',
+    typeLabel[e.event_type] || e.event_type,
+    e.brand || '',
+    e.device || '',
+    e.symptom_id || '',
+    outcomeLabel[e.outcome] || ''
+  ]);
+  const csvLines = [headers, ...rows].map(row =>
+    row.map(cell => '"'+String(cell).replace(/"/g,'""')+'"').join(',')
+  );
+  const csvContent = '\uFEFF' + csvLines.join('\r\n');
+  const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'photoism-helper-기록_' + new Date().toISOString().slice(0,10) + '.csv';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
 }
 
 function goToSnapismPicker(){
