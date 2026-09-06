@@ -2334,6 +2334,27 @@ function getKoreanVoices(){
   return window.speechSynthesis.getVoices().filter(v => v.lang && v.lang.toLowerCase().startsWith('ko'));
 }
 
+const FEMALE_VOICE_HINTS = ['yuna','유나','sunhi','선히','heami','희','female','여성','지민','서연','나연'];
+const MALE_VOICE_HINTS = ['injoon','인준','minsu','민수','male','남성','현수','준서','신지'];
+
+function classifyVoiceGender(v){
+  const n = v.name.toLowerCase();
+  if (FEMALE_VOICE_HINTS.some(h => n.includes(h))) return 'female';
+  if (MALE_VOICE_HINTS.some(h => n.includes(h))) return 'male';
+  return 'unknown';
+}
+
+function pickVoicesByGender(){
+  const voices = getKoreanVoices();
+  let female = voices.find(v => classifyVoiceGender(v) === 'female');
+  let male = voices.find(v => classifyVoiceGender(v) === 'male');
+  // 이름으로 구분이 안 되는 기기에서도 최소 2개는 골라볼 수 있게 나머지 중에서 채워줌
+  const rest = voices.filter(v => v !== female && v !== male);
+  if (!female && rest.length) female = rest.shift();
+  if (!male && rest.length) male = rest.shift();
+  return { female, male };
+}
+
 function openVoiceSettings(){
   const modal = document.getElementById('voiceSettingsModal');
   modal.style.display = 'flex';
@@ -2351,8 +2372,8 @@ function closeVoiceSettings(){
 
 function renderVoiceList(){
   const listEl = document.getElementById('voiceList');
-  const voices = getKoreanVoices();
-  if (!voices.length) {
+  const { female, male } = pickVoicesByGender();
+  if (!female && !male) {
     listEl.innerHTML = '<div class="admin-empty">이 기기에서 한국어 음성을 찾지 못했어요.<br>잠시 후 다시 열어봐 주세요.</div>';
     return;
   }
@@ -2361,22 +2382,29 @@ function renderVoiceList(){
   const currentVoice = pickFriendlyKoreanVoice();
   const selectedName = saved || (currentVoice ? currentVoice.name : null);
 
-  listEl.innerHTML = voices.map((v, i) => {
-    const isSelected = v.name === selectedName;
-    return '<div class="voice-item'+(isSelected?' selected':'')+'" data-voice-idx="'+i+'">' +
+  const options = [
+    { key:'female', label:'👩 여자 목소리', voice: female },
+    { key:'male', label:'👨 남자 목소리', voice: male }
+  ].filter(o => o.voice);
+
+  listEl.innerHTML = options.map(o => {
+    const isSelected = o.voice.name === selectedName;
+    return '<div class="voice-item'+(isSelected?' selected':'')+'" data-gender="'+o.key+'">' +
       '<div><input type="radio" name="voiceChoice" class="voice-select-radio" '+(isSelected?'checked':'')+'>' +
-      '<span class="voice-item-name">'+escapeHtml(v.name)+'</span>' +
+      '<span class="voice-item-name">'+o.label+'</span>' +
       (isSelected ? '<span class="voice-item-badge">사용중</span>' : '') +
       '</div>' +
-      '<div class="voice-item-actions"><button class="voice-preview-btn" data-preview-idx="'+i+'">▶ 미리듣기</button></div>' +
+      '<div class="voice-item-actions"><button class="voice-preview-btn" data-gender-preview="'+o.key+'">▶ 미리듣기</button></div>' +
     '</div>';
   }).join('');
+
+  const voiceByGender = { female, male };
 
   listEl.querySelectorAll('.voice-preview-btn').forEach(btn=>{
     btn.onclick = (e)=>{
       e.stopPropagation();
-      const v = voices[parseInt(btn.dataset.previewIdx,10)];
-      if ('speechSynthesis' in window) {
+      const v = voiceByGender[btn.dataset.genderPreview];
+      if (v && 'speechSynthesis' in window) {
         window.speechSynthesis.cancel();
         const utter = new SpeechSynthesisUtterance('안녕하세요! 이 목소리는 이렇게 들려요.');
         utter.lang = 'ko-KR';
@@ -2390,14 +2418,16 @@ function renderVoiceList(){
 
   listEl.querySelectorAll('.voice-item').forEach(item=>{
     item.onclick = ()=>{
-      const v = voices[parseInt(item.dataset.voiceIdx,10)];
+      const v = voiceByGender[item.dataset.gender];
+      if (!v) return;
       try { localStorage.setItem('kioskHelperVoiceName', v.name); } catch(err){}
       cachedFriendlyVoice = v;
       renderVoiceList();
-      showToast('🎙️', v.name+' 목소리로 설정했어요.');
+      showToast('🎙️', (item.dataset.gender === 'female' ? '여자' : '남자')+' 목소리로 설정했어요.');
     };
   });
 }
+
 
 function speakStepText(text, opts){
   opts = opts || {};
