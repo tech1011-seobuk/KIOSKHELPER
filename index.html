@@ -3452,8 +3452,8 @@ async function loadRecentSymptoms(){
         if (!e.symptom_id) continue;
         key = 'symptom:'+e.symptom_id;
       } else {
-        if (!e.device) continue;
-        key = 'device:'+(e.brand||'')+':'+e.device+':'+(e.detail||'');
+        if (!e.device || !e.detail) continue; // 세부항목 없는 단순 부위 클릭은 표시 안 함
+        key = 'device:'+(e.brand||'')+':'+e.device+':'+e.detail;
       }
       if (seen.has(key)) continue;
       seen.add(key);
@@ -3473,12 +3473,10 @@ async function loadRecentSymptoms(){
         return '<button class="recent-symptom-chip" data-idx="'+i+'">' +
           '<span class="rsc-device">'+(e.device||'')+'</span>' + escapeHtml(label) +
         '</button>';
-      } else if (e.detail) {
+      } else {
         return '<button class="recent-symptom-chip" data-idx="'+i+'">' +
           '<span class="rsc-device">'+(e.device||'')+'</span>' + escapeHtml(e.detail) +
         '</button>';
-      } else {
-        return '<button class="recent-symptom-chip" data-idx="'+i+'">' + escapeHtml(e.device||'') + '</button>';
       }
     }).join('');
     wrap.style.display = 'block';
