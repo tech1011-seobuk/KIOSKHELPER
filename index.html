@@ -565,6 +565,14 @@
     display:inline-block; background:var(--panel2); border:1px solid var(--border);
     border-radius:20px; padding:5px 12px; font-size:12.5px; margin:3px 4px 3px 0; color:var(--muted);
   }
+  .recent-symptom-chip{
+    display:flex; align-items:center; gap:7px;
+    background:rgba(var(--glass-rgb),.7); border:1px solid var(--border);
+    border-radius:20px; padding:8px 14px; font-size:12.5px; color:var(--text);
+    cursor:pointer; transition:border-color .12s ease, transform .12s ease;
+  }
+  .recent-symptom-chip:hover{ border-color:var(--accent); transform:translateY(-1px); }
+  .recent-symptom-chip .rsc-device{ color:var(--muted); font-size:11px; }
   .tool-card-grid{
     display:grid; grid-template-columns:1fr 1fr; gap:16px;
   }
@@ -2352,6 +2360,10 @@ function handleAchievements(symptomId){
 }
 
 const HUB_HTML = `<div class="brand-split-screen">
+  <div id="recentSymptomsWrap" style="display:none; margin-bottom:22px;">
+    <div class="admin-section-title" style="margin:0 0 10px; font-size:13px;">🕘 최근 본 증상</div>
+    <div id="recentSymptomsList" style="display:flex; flex-wrap:wrap; gap:8px;"></div>
+  </div>
   <div class="camera-title">어떤 브랜드인가요?</div>
   <div class="camera-sub">브랜드를 선택해주세요</div>
   <div class="brand-split">
@@ -3259,6 +3271,53 @@ function renderHubScreen(){
   document.getElementById('breadcrumb').innerHTML = 'PHOTOISM 헬퍼';
   document.getElementById('brandPhotoism').onclick = (e)=>{ addRipple(e.currentTarget, e); petSay('nav'); goToPicker(); };
   document.getElementById('brandSnapism').onclick = (e)=>{ addRipple(e.currentTarget, e); petSay('nav'); goToSnapismPicker(); };
+  loadRecentSymptoms();
+}
+
+async function loadRecentSymptoms(){
+  if (!sb || !currentUser) return;
+  try{
+    const { data, error } = await sb.from('events')
+      .select('*')
+      .eq('user_id', currentUser.id)
+      .eq('event_type', 'symptom_click')
+      .order('created_at', { ascending:false })
+      .limit(30);
+    if (error || !data || !data.length) return;
+
+    const seen = new Set();
+    const recent = [];
+    for (const e of data) {
+      if (!e.symptom_id || seen.has(e.symptom_id)) continue;
+      seen.add(e.symptom_id);
+      recent.push(e);
+      if (recent.length >= 5) break;
+    }
+    if (!recent.length) return;
+    // appState가 그새 바뀌었을 수 있으니 허브 화면일 때만 반영
+    if (appState !== 'hub') return;
+    const wrap = document.getElementById('recentSymptomsWrap');
+    const list = document.getElementById('recentSymptomsList');
+    if (!wrap || !list) return;
+
+    list.innerHTML = recent.map(e => {
+      const label = (typeof SYMPTOM_LABEL !== 'undefined' && SYMPTOM_LABEL[e.symptom_id]) ? SYMPTOM_LABEL[e.symptom_id] : e.symptom_id;
+      return '<button class="recent-symptom-chip" data-symptom-id="'+e.symptom_id+'" data-brand="'+(e.brand||'photoism')+'" data-device="'+(e.device||'')+'">' +
+        '<span class="rsc-device">'+(e.device||'')+'</span>' + escapeHtml(label) +
+      '</button>';
+    }).join('');
+    wrap.style.display = 'block';
+
+    list.querySelectorAll('.recent-symptom-chip').forEach(chip=>{
+      chip.onclick = (e)=>{
+        addRipple(chip, e);
+        petSay('nav');
+        symptomSource = chip.dataset.brand === 'snapism' ? 'snapism' : 'photoism';
+        selectedDevice = chip.dataset.device || null;
+        startSymptom(chip.dataset.symptomId);
+      };
+    });
+  } catch(err) { /* 조용히 무시 — 최근 본 증상은 부가 기능이라 실패해도 허브 화면엔 지장 없음 */ }
 }
 
 function goToAdminDashboard(){
