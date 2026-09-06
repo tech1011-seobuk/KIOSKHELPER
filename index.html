@@ -1141,6 +1141,13 @@
     margin-bottom:6px;
     letter-spacing:.3px;
   }
+  .speak-btn{
+    background:none; border:none; cursor:pointer; font-size:13px;
+    margin-left:7px; padding:2px 5px; border-radius:6px; vertical-align:middle;
+    opacity:.75; transition:opacity .12s ease, background .12s ease;
+  }
+  .speak-btn:hover{ opacity:1; background:rgba(var(--glass-rgb),.5); }
+  .speak-btn:active{ transform:scale(0.92); }
   .attachment-tag{
     display:inline-block;
     margin-top:9px;
@@ -2164,6 +2171,7 @@ function startSymptom(symptomId){
 }
 
 function resetAll(){
+  if ('speechSynthesis' in window) window.speechSynthesis.cancel();
   if (symptomSource === 'snapism') { goToSnapismPicker(); } else { goToPicker(); }
 }
 
@@ -2205,17 +2213,48 @@ const ENCOURAGE_LINES = [
   '이 정도면 TX팀 명예직원 각!'
 ];
 
-function buildBubbleInner(stepCounter, step, node){
+const speakTextRegistry = {};
+
+function buildBubbleInner(stepCounter, step, node, bubbleKey){
   const photoList = node.images ? node.images : (node.image ? [node.image] : []);
   const photosHtml = photoList.length
     ? '<div class="step-photos">' + photoList.map(src =>
         '<img src="'+src+'" class="step-photo" alt="조치 사진" onclick="openLightbox(this.src)">'
       ).join('') + '</div>'
     : '';
-  return '<div class="step-tag">STEP '+stepCounter+' · '+step.symptomId+'</div>' +
+  if (bubbleKey) speakTextRegistry[bubbleKey] = node.text;
+  const speakBtnHtml = bubbleKey
+    ? '<button class="speak-btn" data-speak-key="'+bubbleKey+'" title="읽어주기">🔊</button>'
+    : '';
+  return '<div class="step-tag">STEP '+stepCounter+' · '+step.symptomId+speakBtnHtml+'</div>' +
     escapeHtml(node.text) +
     photosHtml +
     (!photoList.length && node.attachment ? '<div class="attachment-tag">'+node.attachment+'</div>' : '');
+}
+
+function speakStepText(text){
+  if (!('speechSynthesis' in window) || typeof SpeechSynthesisUtterance === 'undefined') {
+    showToast('🔇', '이 브라우저는 음성 읽기를 지원하지 않아요.');
+    return;
+  }
+  window.speechSynthesis.cancel();
+  const utter = new SpeechSynthesisUtterance(text);
+  utter.lang = 'ko-KR';
+  utter.rate = 1.0;
+  window.speechSynthesis.speak(utter);
+}
+
+function wireSpeakButtons(container){
+  container.querySelectorAll('.speak-btn').forEach(btn=>{
+    if (btn.dataset.wired) return;
+    btn.dataset.wired = '1';
+    btn.onclick = (e)=>{
+      e.stopPropagation();
+      addRipple(btn, e);
+      const text = speakTextRegistry[btn.dataset.speakKey];
+      if (text) speakStepText(text);
+    };
+  });
 }
 
 function buildOptionsWrap(idx, node, animate){
@@ -2922,6 +2961,7 @@ const PICKER_HTML = `<div class="picker-screen hud-frame">
 </div>`;
 
 function goToHub(){
+  if ('speechSynthesis' in window) window.speechSynthesis.cancel();
   appState = 'hub';
   selectedDevice = null;
   path = [];
@@ -3999,7 +4039,8 @@ function renderChat(){
       setTimeout(()=>{
         const bubbleEl = row.querySelector('.bubble.bot');
         bubbleEl.classList.remove('typing-bubble');
-        bubbleEl.innerHTML = buildBubbleInner(stepCounter, step, node);
+        bubbleEl.innerHTML = buildBubbleInner(stepCounter, step, node, key);
+        wireSpeakButtons(bubbleEl);
         if(!step.chosen){
           const opts = buildOptionsWrap(idx, node, true);
           inner.appendChild(opts);
@@ -4009,9 +4050,10 @@ function renderChat(){
       return; // options appended asynchronously above
     }
 
-    const bubbleInner = buildBubbleInner(stepCounter, step, node);
+    const bubbleInner = buildBubbleInner(stepCounter, step, node, key);
     row.innerHTML = '<div class="avatar bot">🤖</div><div class="bubble bot">'+bubbleInner+'</div>';
     inner.appendChild(row);
+    wireSpeakButtons(row);
 
     if(step.chosen){
       const urow = document.createElement('div');
