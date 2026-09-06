@@ -453,6 +453,15 @@
   .admin-nav-btn:hover{ transform:translateY(-1px); box-shadow:0 4px 14px rgba(var(--glass-rgb),.35); }
   .admin-nav-btn.active{ background:var(--panel2); color:var(--accent); border-color:var(--accent); }
 
+  .speak-toggle-btn{
+    background:var(--panel2); border:1px solid var(--border); color:var(--muted);
+    padding:8px 14px; border-radius:9px; font-size:12.5px; font-weight:600;
+    cursor:pointer; font-family:inherit; white-space:nowrap;
+    transition:all .15s ease;
+  }
+  .speak-toggle-btn:hover{ border-color:var(--accent); color:var(--text); }
+  .speak-toggle-btn.active{ background:var(--accent); color:var(--accent-ink); border-color:var(--accent); }
+
   .topbar-right{ display:flex; align-items:center; gap:10px; }
 
   /* ===== Hub screen: pick which tool to use ===== */
@@ -1612,6 +1621,7 @@
     <div class="topbar">
       <div class="breadcrumb" id="breadcrumb">PHOTOISM 헬퍼</div>
       <div class="topbar-right">
+        <button class="speak-toggle-btn" id="autoSpeakBtn" style="display:none;" title="음성으로 자동 읽어주기">🔈 자동 읽기 켜기</button>
         <button class="admin-nav-btn" id="adminDashBtn" style="display:none;" title="관리자 대시보드">📊 관리자</button>
         <span id="userInfo" style="display:none; font-size:12px; color:var(--muted); margin-right:4px;"></span>
         <button class="home-btn" id="logoutBtn" style="display:none;" title="로그아웃">
@@ -1739,6 +1749,11 @@ document.getElementById('adminDashBtn').addEventListener('click', (e)=>{
   addRipple(e.currentTarget, e);
   petSay('nav');
   goToAdminDashboard();
+});
+
+document.getElementById('autoSpeakBtn').addEventListener('click', (e)=>{
+  addRipple(e.currentTarget, e);
+  toggleAutoSpeak();
 });
 
 /* ============================= DATA ============================= */
@@ -2213,48 +2228,88 @@ const ENCOURAGE_LINES = [
   '이 정도면 TX팀 명예직원 각!'
 ];
 
-const speakTextRegistry = {};
-
-function buildBubbleInner(stepCounter, step, node, bubbleKey){
+function buildBubbleInner(stepCounter, step, node){
   const photoList = node.images ? node.images : (node.image ? [node.image] : []);
   const photosHtml = photoList.length
     ? '<div class="step-photos">' + photoList.map(src =>
         '<img src="'+src+'" class="step-photo" alt="조치 사진" onclick="openLightbox(this.src)">'
       ).join('') + '</div>'
     : '';
-  if (bubbleKey) speakTextRegistry[bubbleKey] = node.text;
-  const speakBtnHtml = bubbleKey
-    ? '<button class="speak-btn" data-speak-key="'+bubbleKey+'" title="읽어주기">🔊</button>'
-    : '';
-  return '<div class="step-tag">STEP '+stepCounter+' · '+step.symptomId+speakBtnHtml+'</div>' +
+  return '<div class="step-tag">STEP '+stepCounter+' · '+step.symptomId+'</div>' +
     escapeHtml(node.text) +
     photosHtml +
     (!photoList.length && node.attachment ? '<div class="attachment-tag">'+node.attachment+'</div>' : '');
 }
 
-function speakStepText(text){
+/* ---- 음성 읽어주기 (자동 모드) ---- */
+let autoSpeakEnabled = false;
+let autoSpokenKeys = new Set();
+let cachedFriendlyVoice = null;
+
+if ('speechSynthesis' in window) {
+  window.speechSynthesis.onvoiceschanged = () => { cachedFriendlyVoice = null; };
+}
+
+function pickFriendlyKoreanVoice(){
+  if (cachedFriendlyVoice) return cachedFriendlyVoice;
+  if (!('speechSynthesis' in window)) return null;
+  const voices = window.speechSynthesis.getVoices();
+  const korean = voices.filter(v => v.lang && v.lang.toLowerCase().startsWith('ko'));
+  if (!korean.length) return null;
+  // 친근하게 들리는 여성 음색을 우선적으로 시도 (기기/브라우저마다 제공 목록이 달라요)
+  const preferredNames = ['yuna','유나','sunhi','선히','희','female','여성','한국의'];
+  const best = korean.find(v => preferredNames.some(n => v.name.toLowerCase().includes(n)));
+  cachedFriendlyVoice = best || korean[0];
+  return cachedFriendlyVoice;
+}
+
+function speakStepText(text, opts){
+  opts = opts || {};
   if (!('speechSynthesis' in window) || typeof SpeechSynthesisUtterance === 'undefined') {
-    showToast('🔇', '이 브라우저는 음성 읽기를 지원하지 않아요.');
+    if (opts.notifyIfUnsupported) showToast('🔇', '이 브라우저는 음성 읽기를 지원하지 않아요.');
     return;
   }
-  window.speechSynthesis.cancel();
+  if (opts.interrupt) window.speechSynthesis.cancel();
   const utter = new SpeechSynthesisUtterance(text);
   utter.lang = 'ko-KR';
-  utter.rate = 1.0;
+  utter.rate = 1.02;
+  utter.pitch = 1.15;
+  const voice = pickFriendlyKoreanVoice();
+  if (voice) utter.voice = voice;
   window.speechSynthesis.speak(utter);
 }
 
-function wireSpeakButtons(container){
-  container.querySelectorAll('.speak-btn').forEach(btn=>{
-    if (btn.dataset.wired) return;
-    btn.dataset.wired = '1';
-    btn.onclick = (e)=>{
-      e.stopPropagation();
-      addRipple(btn, e);
-      const text = speakTextRegistry[btn.dataset.speakKey];
-      if (text) speakStepText(text);
-    };
-  });
+function updateAutoSpeakBtn(){
+  const btn = document.getElementById('autoSpeakBtn');
+  if (!btn) return;
+  btn.classList.toggle('active', autoSpeakEnabled);
+  btn.innerHTML = autoSpeakEnabled ? '🔊 자동 읽기 켜짐' : '🔈 자동 읽기 켜기';
+}
+
+function toggleAutoSpeak(){
+  autoSpeakEnabled = !autoSpeakEnabled;
+  if (!autoSpeakEnabled) {
+    if ('speechSynthesis' in window) window.speechSynthesis.cancel();
+  } else {
+    speakStepText('이제부터 안내를 읽어드릴게요.', { interrupt:true, notifyIfUnsupported:true });
+    const last = path[path.length-1];
+    if (last && !last.end) {
+      const tree = TREES[last.symptomId];
+      const node = tree && tree.nodes[last.nodeId];
+      const key = (path.length-1)+'|'+last.symptomId+'|'+last.nodeId;
+      if (node && !autoSpokenKeys.has(key)) {
+        autoSpokenKeys.add(key);
+        speakStepText(node.text);
+      }
+    }
+  }
+  updateAutoSpeakBtn();
+}
+
+function maybeAutoSpeakStep(key, node){
+  if (!autoSpeakEnabled || autoSpokenKeys.has(key)) return;
+  autoSpokenKeys.add(key);
+  speakStepText(node.text);
 }
 
 function buildOptionsWrap(idx, node, animate){
@@ -3842,9 +3897,12 @@ function renderSymptomsScreen(){
 function updateResetButton(){
   const resetBtn = document.getElementById('resetBtn');
   const homeBtn = document.getElementById('homeBtn');
+  const autoSpeakBtn = document.getElementById('autoSpeakBtn');
   homeBtn.style.display = (appState === 'hub' || appState === 'login') ? 'none' : 'flex';
   homeBtn.onclick = (e)=>{ addRipple(e.currentTarget, e); goToHub(); };
   updateUserInfoBar();
+  autoSpeakBtn.style.display = (appState === 'chat' && path.length > 0) ? 'inline-block' : 'none';
+  updateAutoSpeakBtn();
 
   if(appState==='symptoms'){
     resetBtn.style.display = 'inline-block';
@@ -4039,8 +4097,8 @@ function renderChat(){
       setTimeout(()=>{
         const bubbleEl = row.querySelector('.bubble.bot');
         bubbleEl.classList.remove('typing-bubble');
-        bubbleEl.innerHTML = buildBubbleInner(stepCounter, step, node, key);
-        wireSpeakButtons(bubbleEl);
+        bubbleEl.innerHTML = buildBubbleInner(stepCounter, step, node);
+        maybeAutoSpeakStep(key, node);
         if(!step.chosen){
           const opts = buildOptionsWrap(idx, node, true);
           inner.appendChild(opts);
@@ -4050,10 +4108,10 @@ function renderChat(){
       return; // options appended asynchronously above
     }
 
-    const bubbleInner = buildBubbleInner(stepCounter, step, node, key);
+    const bubbleInner = buildBubbleInner(stepCounter, step, node);
     row.innerHTML = '<div class="avatar bot">🤖</div><div class="bubble bot">'+bubbleInner+'</div>';
     inner.appendChild(row);
-    wireSpeakButtons(row);
+    maybeAutoSpeakStep(key, node);
 
     if(step.chosen){
       const urow = document.createElement('div');
