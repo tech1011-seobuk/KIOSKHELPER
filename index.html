@@ -1788,7 +1788,8 @@ async function logEvent(eventType, extra){
       brand: extra.brand || null,
       device: extra.device || null,
       symptom_id: extra.symptomId || null,
-      outcome: extra.outcome || null
+      outcome: extra.outcome || null,
+      detail: extra.detail || null
     });
   } catch(err){ /* fail silently — never block the UI on logging */ }
 }
@@ -3262,7 +3263,7 @@ function renderDeviceActionsScreen(){
       if (action === 'repair') { appState = 'symptoms'; render(); }
       else if (action === 'color') { pendingCameraAction = 'color'; goToColorModel(); }
       else if (action === 'bodyReplace') { pendingCameraAction = 'bodyReplace'; goToColorModel(); }
-      else if (action === 'replace') { selectedEquipReplaceDevice = selectedDevice; appState = 'equipReplaceDetail'; render(); }
+      else if (action === 'replace') { selectedEquipReplaceDevice = selectedDevice; appState = 'equipReplaceDetail'; logEvent('device_click', { brand:'photoism', device:selectedDevice, detail:'교체 방법' }); render(); }
     };
   });
   add3DTilt(area, '.tool-card', 4);
@@ -3452,7 +3453,7 @@ async function loadRecentSymptoms(){
         key = 'symptom:'+e.symptom_id;
       } else {
         if (!e.device) continue;
-        key = 'device:'+(e.brand||'')+':'+e.device;
+        key = 'device:'+(e.brand||'')+':'+e.device+':'+(e.detail||'');
       }
       if (seen.has(key)) continue;
       seen.add(key);
@@ -3472,10 +3473,12 @@ async function loadRecentSymptoms(){
         return '<button class="recent-symptom-chip" data-idx="'+i+'">' +
           '<span class="rsc-device">'+(e.device||'')+'</span>' + escapeHtml(label) +
         '</button>';
-      } else {
+      } else if (e.detail) {
         return '<button class="recent-symptom-chip" data-idx="'+i+'">' +
-          '<span class="rsc-device">부위</span>' + escapeHtml(e.device||'') +
+          '<span class="rsc-device">'+(e.device||'')+'</span>' + escapeHtml(e.detail) +
         '</button>';
+      } else {
+        return '<button class="recent-symptom-chip" data-idx="'+i+'">' + escapeHtml(e.device||'') + '</button>';
       }
     }).join('');
     wrap.style.display = 'block';
@@ -3488,18 +3491,51 @@ async function loadRecentSymptoms(){
         const brand = item.brand === 'snapism' ? 'snapism' : 'photoism';
         symptomSource = brand;
         selectedDevice = item.device || null;
+
         if (item.event_type === 'symptom_click') {
           startSymptom(item.symptom_id);
-        } else {
-          logEvent('device_click', { brand, device: item.device });
-          if (brand === 'snapism') {
-            appState = 'symptoms';
-            render();
-          } else {
-            const actions = getDeviceActions(item.device);
-            appState = actions.length <= 1 ? 'symptoms' : 'deviceActions';
-            render();
+          return;
+        }
+
+        // 카메라 기종+세부항목까지 있으면 그 지점으로 바로 복귀
+        if (item.device === '카메라' && item.detail) {
+          const [modelSub, actionLabel] = item.detail.split(' · ');
+          const model = CAMERA_MODELS.find(m => m.sub === modelSub);
+          if (model) {
+            selectedCameraModel = model.id;
+            selectedDevice = '카메라';
+            if (actionLabel === '색감조정') {
+              pendingCameraAction = 'color';
+              logEvent('device_click', { brand:'photoism', device:'카메라', detail:item.detail });
+              appState = 'cameraBasicCheck';
+              render();
+              return;
+            } else if (actionLabel === '카메라교체') {
+              pendingCameraAction = 'bodyReplace';
+              selectedEquipReplaceDevice = '카메라';
+              logEvent('device_click', { brand:'photoism', device:'카메라', detail:item.detail });
+              appState = 'equipReplaceDetail';
+              render();
+              return;
+            }
           }
+        }
+        if (item.detail === '교체 방법') {
+          selectedEquipReplaceDevice = item.device;
+          logEvent('device_click', { brand, device:item.device, detail:item.detail });
+          appState = 'equipReplaceDetail';
+          render();
+          return;
+        }
+
+        logEvent('device_click', { brand, device: item.device });
+        if (brand === 'snapism') {
+          appState = 'symptoms';
+          render();
+        } else {
+          const actions = getDeviceActions(item.device);
+          appState = actions.length <= 1 ? 'symptoms' : 'deviceActions';
+          render();
         }
       };
     });
@@ -3958,6 +3994,11 @@ function flipAndExpandCard(cardEl, modelId){
     selectedCameraModel = modelId;
     selectedDevice = '카메라';
     const area = document.getElementById('chatArea');
+    const model = CAMERA_MODELS.find(m => m.id === modelId);
+    const actionLabel = pendingCameraAction === 'color' ? '색감조정' : (pendingCameraAction === 'bodyReplace' ? '카메라교체' : null);
+    if (actionLabel) {
+      logEvent('device_click', { brand:'photoism', device:'카메라', detail: (model ? model.sub : modelId) + ' · ' + actionLabel });
+    }
     if (pendingCameraAction === 'color') {
       appState = 'cameraBasicCheck';
       renderCameraBasicCheckScreen();
