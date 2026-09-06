@@ -2519,10 +2519,6 @@ function handleAchievements(symptomId){
 }
 
 const HUB_HTML = `<div class="brand-split-screen">
-  <div id="recentSymptomsWrap" style="display:none; margin-bottom:22px;">
-    <div class="admin-section-title" style="margin:0 0 10px; font-size:13px;">🕘 최근 클릭한 사항</div>
-    <div id="recentSymptomsList" style="display:flex; flex-wrap:wrap; gap:8px;"></div>
-  </div>
   <div class="camera-title">어떤 브랜드인가요?</div>
   <div class="camera-sub">브랜드를 선택해주세요</div>
   <div class="brand-split">
@@ -2762,6 +2758,10 @@ const HOTSPOT_DEVICE_MAP = {
 };
 
 const SNAPISM_PICKER_HTML = `<div class="picker-screen hud-frame">
+  <div id="recentSymptomsWrap" style="display:none; margin:0 0 18px;">
+    <div class="admin-section-title" style="margin:0 0 10px; font-size:13px;">🕘 최근 클릭한 사항</div>
+    <div id="recentSymptomsList" style="display:flex; flex-wrap:wrap; gap:8px; justify-content:center;"></div>
+  </div>
   <div class="picker-title">어느 부위인가요?</div>
   <div class="picker-sub">전면부1·전면부2를 같이 볼 수 있어요. 이름표를 눌러주세요</div>
 
@@ -2908,6 +2908,10 @@ const SNAPISM_PICKER_HTML = `<div class="picker-screen hud-frame">
 
 
 const PICKER_HTML = `<div class="picker-screen hud-frame">
+  <div id="recentSymptomsWrap" style="display:none; margin:0 0 18px;">
+    <div class="admin-section-title" style="margin:0 0 10px; font-size:13px;">🕘 최근 클릭한 사항</div>
+    <div id="recentSymptomsList" style="display:flex; flex-wrap:wrap; gap:8px; justify-content:center;"></div>
+  </div>
   <div class="picker-title">어느 부위인가요?</div>
   <div class="picker-sub">전면·후면을 같이 볼 수 있어요. 이름표를 눌러주세요</div>
 
@@ -3430,15 +3434,16 @@ function renderHubScreen(){
   document.getElementById('breadcrumb').innerHTML = 'PHOTOISM 헬퍼';
   document.getElementById('brandPhotoism').onclick = (e)=>{ addRipple(e.currentTarget, e); petSay('nav'); goToPicker(); };
   document.getElementById('brandSnapism').onclick = (e)=>{ addRipple(e.currentTarget, e); petSay('nav'); goToSnapismPicker(); };
-  loadRecentSymptoms();
 }
 
-async function loadRecentSymptoms(){
+async function loadRecentSymptoms(brand){
   if (!sb || !currentUser) return;
+  const expectedState = brand === 'snapism' ? 'snapismPicker' : 'picker';
   try{
     const { data, error } = await sb.from('events')
       .select('*')
       .eq('user_id', currentUser.id)
+      .eq('brand', brand)
       .in('event_type', ['symptom_click','device_click'])
       .order('created_at', { ascending:false })
       .limit(40);
@@ -3461,8 +3466,8 @@ async function loadRecentSymptoms(){
       if (recent.length >= 6) break;
     }
     if (!recent.length) return;
-    // appState가 그새 바뀌었을 수 있으니 허브 화면일 때만 반영
-    if (appState !== 'hub') return;
+    // appState가 그새 바뀌었을 수 있으니 해당 브랜드 피커 화면일 때만 반영
+    if (appState !== expectedState) return;
     const wrap = document.getElementById('recentSymptomsWrap');
     const list = document.getElementById('recentSymptomsList');
     if (!wrap || !list) return;
@@ -3898,6 +3903,7 @@ function renderSnapismPickerScreen(){
       }
     });
   });
+  loadRecentSymptoms('snapism');
 }
 
 function goToPhotoismTools(){
@@ -4147,6 +4153,7 @@ function renderPickerScreen(){
       setTimeout(()=> selectDeviceFromPicker(h.dataset.device), 220);
     });
   });
+  loadRecentSymptoms('photoism');
 }
 
 function renderSymptomsScreen(){
