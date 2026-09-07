@@ -1760,6 +1760,17 @@ async function handleLogout(){
   render();
 }
 
+if (sb) {
+  sb.auth.onAuthStateChange((event) => {
+    if (event === 'PASSWORD_RECOVERY') {
+      appState = 'login';
+      authMode = 'updatePassword';
+      authNotice = null;
+      render();
+    }
+  });
+}
+
 async function initAuth(){
   if (sdkLoadFailed || !sb) {
     appState = 'login';
@@ -3391,8 +3402,80 @@ function renderCameraColorGuideScreen(){
 function renderLoginScreen(){
   const area = document.getElementById('chatArea');
   const isSignup = authMode === 'signup';
+  const isForgot = authMode === 'forgot';
+  const isUpdatePassword = authMode === 'updatePassword';
   const wrap = document.createElement('div');
   wrap.className = 'login-screen';
+
+  if (isUpdatePassword) {
+    wrap.innerHTML =
+      '<div class="hub-title">새 비밀번호 설정</div>' +
+      '<div class="hub-sub">새로 쓰실 비밀번호를 입력해주세요.</div>' +
+      (authNotice ? '<div class="'+(authNotice.type==='error'?'login-error':'login-notice')+'">'+authNotice.text+'</div>' : '') +
+      '<form id="authForm">' +
+        '<div class="login-field"><label>새 비밀번호</label><input type="password" id="authNewPassword" autocomplete="new-password" minlength="6" required></div>' +
+        '<button type="submit" class="login-submit" id="authSubmitBtn">비밀번호 변경</button>' +
+      '</form>';
+    area.innerHTML = '';
+    area.appendChild(wrap);
+    document.getElementById('breadcrumb').innerHTML = 'PHOTOISM 헬퍼';
+    document.getElementById('authForm').onsubmit = async (e)=>{
+      e.preventDefault();
+      if (!sb) return;
+      const submitBtn = document.getElementById('authSubmitBtn');
+      const newPassword = document.getElementById('authNewPassword').value;
+      submitBtn.disabled = true;
+      submitBtn.textContent = '처리 중...';
+      const { error } = await sb.auth.updateUser({ password: newPassword });
+      if (error) {
+        authNotice = { type:'error', text: error.message };
+        render();
+        return;
+      }
+      authNotice = { type:'info', text: '비밀번호가 변경됐어요. 다시 로그인해주세요.' };
+      authMode = 'login';
+      await sb.auth.signOut();
+      currentUser = null;
+      render();
+    };
+    return;
+  }
+
+  if (isForgot) {
+    wrap.innerHTML =
+      '<div class="hub-title">비밀번호 찾기</div>' +
+      '<div class="hub-sub">가입하신 이메일로 재설정 링크를 보내드릴게요.</div>' +
+      (authNotice ? '<div class="'+(authNotice.type==='error'?'login-error':'login-notice')+'">'+authNotice.text+'</div>' : '') +
+      '<form id="authForm">' +
+        '<div class="login-field"><label>이메일</label><input type="email" id="authEmail" autocomplete="email" required></div>' +
+        '<button type="submit" class="login-submit" id="authSubmitBtn">재설정 메일 보내기</button>' +
+      '</form>' +
+      '<div class="login-switch"><button id="authSwitchBtn">← 로그인으로 돌아가기</button></div>';
+    area.innerHTML = '';
+    area.appendChild(wrap);
+    document.getElementById('breadcrumb').innerHTML = 'PHOTOISM 헬퍼';
+    document.getElementById('authSwitchBtn').onclick = ()=>{ authMode = 'login'; authNotice = null; render(); };
+    document.getElementById('authForm').onsubmit = async (e)=>{
+      e.preventDefault();
+      if (!sb) return;
+      const submitBtn = document.getElementById('authSubmitBtn');
+      const email = document.getElementById('authEmail').value.trim();
+      submitBtn.disabled = true;
+      submitBtn.textContent = '보내는 중...';
+      const { error } = await sb.auth.resetPasswordForEmail(email, {
+        redirectTo: window.location.origin + window.location.pathname
+      });
+      if (error) {
+        authNotice = { type:'error', text: error.message };
+        render();
+        return;
+      }
+      authNotice = { type:'info', text: '재설정 메일을 보냈어요. 메일함을 확인해주세요 (스팸함도 확인해보세요).' };
+      render();
+    };
+    return;
+  }
+
   wrap.innerHTML =
     '<div class="hub-title">'+(isSignup ? '회원가입' : '로그인')+'</div>' +
     '<div class="hub-sub">'+(isSignup ? 'PHOTOISM 헬퍼 계정을 만들어주세요.' : 'PHOTOISM 헬퍼에 로그인해주세요.')+'</div>' +
@@ -3403,6 +3486,7 @@ function renderLoginScreen(){
       '<div class="login-field"><label>비밀번호</label><input type="password" id="authPassword" autocomplete="'+(isSignup?'new-password':'current-password')+'" minlength="6" required></div>' +
       '<button type="submit" class="login-submit" id="authSubmitBtn">'+(isSignup ? '회원가입' : '로그인')+'</button>' +
     '</form>' +
+    (!isSignup ? '<div class="login-switch"><button id="authForgotBtn">비밀번호를 잊으셨나요?</button></div>' : '') +
     '<div class="login-switch">' +
       (isSignup ? '이미 계정이 있으신가요? <button id="authSwitchBtn">로그인</button>' : '계정이 없으신가요? <button id="authSwitchBtn">회원가입</button>') +
     '</div>';
@@ -3415,6 +3499,14 @@ function renderLoginScreen(){
     authNotice = null;
     render();
   };
+
+  if (!isSignup) {
+    document.getElementById('authForgotBtn').onclick = ()=>{
+      authMode = 'forgot';
+      authNotice = null;
+      render();
+    };
+  }
 
   document.getElementById('authForm').onsubmit = async (e)=>{
     e.preventDefault();
@@ -3676,18 +3768,6 @@ function renderAdminDashboardContent(events, profiles){
   });
   const timeMax = Math.max(...Object.values(timeBuckets), 1);
 
-  // 기기별 A/S 필요율
-  const deviceOutcomeStats = {};
-  outcomes.forEach(e => {
-    const key = e.device || '(알수없음)';
-    if (!deviceOutcomeStats[key]) deviceOutcomeStats[key] = { as:0, total:0 };
-    deviceOutcomeStats[key].total++;
-    if (e.outcome === 'as') deviceOutcomeStats[key].as++;
-  });
-  const deviceAsRows = Object.entries(deviceOutcomeStats)
-    .map(([name, s]) => [name, s.as, s.total, s.total ? Math.round(s.as/s.total*100) : 0])
-    .sort((a,b)=>b[3]-a[3]);
-
   // 미해결 최근 건 리스트 (담당자연결/A·S, 최근 10건)
   const recentUnresolved = outcomes
     .filter(e => e.outcome === 'escalate' || e.outcome === 'as')
@@ -3838,15 +3918,6 @@ function renderAdminDashboardContent(events, profiles){
     ).join('') +
     '</div>';
 
-  // 기기별 A/S 필요율
-  const deviceAsHtml = deviceAsRows.length ?
-    '<table class="admin-table"><thead><tr><th>기기</th><th>A/S 건수</th><th>전체 조치건수</th><th>A/S 필요율</th></tr></thead><tbody>' +
-    deviceAsRows.map(([name, asCount, total, rate]) => {
-      const rateClass = rate >= 40 ? 'admin-rate-bad' : '';
-      return '<tr><td>'+name+'</td><td>'+asCount+'</td><td>'+total+'</td><td class="'+rateClass+'">'+rate+'%</td></tr>';
-    }).join('') + '</tbody></table>'
-    : '<div class="admin-empty">아직 A/S 관련 기록이 없어요.</div>';
-
   // 미해결 최근 건 리스트
   const recentUnresolvedHtml = recentUnresolved.length ?
     recentUnresolved.map(e => {
@@ -3878,7 +3949,6 @@ function renderAdminDashboardContent(events, profiles){
       '<div class="admin-section-title">🕐 시간대별 발생 패턴</div>' + timeHtml +
       '<div class="admin-section-title">🏆 자주 발생하는 증상 Top 5</div>' + top5Html +
       '<div class="admin-section-title">🩺 증상별 클릭수 · 해결률 · 미해결률</div>' + symptomTableHtml +
-      '<div class="admin-section-title">🔧 기기별 A/S 필요율</div>' + deviceAsHtml +
       '<div class="admin-section-title">📍 부위/섹터별 클릭수</div>' + deviceTableHtml +
       '<div class="admin-section-title">⏳ 미해결로 남은 최근 건</div>' +
       '<div style="background:rgba(var(--glass-rgb),.7); border:1px solid var(--border); border-radius:12px; overflow:hidden;">' + recentUnresolvedHtml + '</div>' +
