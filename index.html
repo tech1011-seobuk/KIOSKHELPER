@@ -3757,16 +3757,13 @@ function renderAdminDashboardContent(events, profiles){
     else if (e.brand === 'snapism') brandCounts.snapism++;
   });
 
-  // 시간대별 발생 패턴 (4구간)
-  const timeBuckets = { '새벽 (00-06시)':0, '오전 (06-12시)':0, '오후 (12-18시)':0, '저녁 (18-24시)':0 };
+  // 시간대별 발생 패턴 (1시간 단위, 24구간)
+  const timeBuckets = new Array(24).fill(0);
   events.forEach(e => {
     const h = new Date(e.created_at).getHours();
-    if (h < 6) timeBuckets['새벽 (00-06시)']++;
-    else if (h < 12) timeBuckets['오전 (06-12시)']++;
-    else if (h < 18) timeBuckets['오후 (12-18시)']++;
-    else timeBuckets['저녁 (18-24시)']++;
+    timeBuckets[h]++;
   });
-  const timeMax = Math.max(...Object.values(timeBuckets), 1);
+  const timeMax = Math.max(...timeBuckets, 1);
 
   // 미해결 최근 건 리스트 (담당자연결/A·S, 최근 10건)
   const recentUnresolved = outcomes
@@ -3908,12 +3905,11 @@ function renderAdminDashboardContent(events, profiles){
 
   // 시간대별 발생 패턴
   const timeHtml =
-    '<div style="display:flex; align-items:flex-end; gap:16px; padding:10px 4px 4px;">' +
-    Object.entries(timeBuckets).map(([label, count]) =>
-      '<div style="text-align:center; flex:1;">' +
-        '<div style="height:70px; display:flex; align-items:flex-end; justify-content:center;"><div style="width:36px; background:var(--accent); border-radius:6px 6px 0 0; height:'+Math.max(4,Math.round(count/timeMax*70))+'px;"></div></div>' +
-        '<div style="font-size:11px; color:var(--muted); margin-top:6px;">'+label+'</div>' +
-        '<div style="font-size:13px; font-weight:700;">'+count+'</div>' +
+    '<div style="display:flex; align-items:flex-end; gap:4px; padding:10px 4px 4px; overflow-x:auto;">' +
+    timeBuckets.map((count, h) =>
+      '<div style="text-align:center; flex:1; min-width:12px;" title="'+h+'시: '+count+'건">' +
+        '<div style="height:70px; display:flex; align-items:flex-end; justify-content:center;"><div style="width:100%; max-width:16px; background:var(--accent); border-radius:3px 3px 0 0; height:'+Math.max(3,Math.round(count/timeMax*70))+'px;"></div></div>' +
+        '<div style="font-size:9.5px; color:var(--muted); margin-top:5px;">'+(h % 3 === 0 ? h+'시' : '')+'</div>' +
       '</div>'
     ).join('') +
     '</div>';
@@ -3944,7 +3940,7 @@ function renderAdminDashboardContent(events, profiles){
         '<button class="admin-export-btn" id="csvExportBtn">⬇ CSV로 내보내기</button>' +
       '</div>' +
       summaryHtml +
-      '<div class="admin-section-title">📈 기간별 추이 (이번주 vs 지난주)</div>' + trendHtml +
+      '<div class="admin-section-title">📈 기간별 활동량 추이 (이번주 vs 지난주)</div>' + trendHtml +
       '<div class="admin-section-title">🏬 브랜드별 비교</div>' + brandHtml +
       '<div class="admin-section-title">🕐 시간대별 발생 패턴</div>' + timeHtml +
       '<div class="admin-section-title">🏆 자주 발생하는 증상 Top 5</div>' + top5Html +
