@@ -3740,6 +3740,13 @@ function renderAdminDashboardContent(events, profiles){
   });
   const symptomRows = Object.entries(symptomStats).sort((a,b)=>b[1].total-a[1].total);
 
+  // 미해결률 높은 증상 랭킹 (매뉴얼 보강 필요 신호) — 표본이 너무 적으면 왜곡되니 최소 2건 이상만
+  const worstUnresolvedRows = Object.entries(symptomStats)
+    .filter(([, s]) => s.total >= 2)
+    .map(([sid, s]) => [sid, s, s.total ? Math.round((s.escalate + s.as) / s.total * 100) : 0])
+    .sort((a, b) => b[2] - a[2])
+    .slice(0, 5);
+
   const userCounts = {};
   events.forEach(e => {
     if (!e.user_id) return;
@@ -3851,6 +3858,17 @@ function renderAdminDashboardContent(events, profiles){
     }).join('') + '</tbody></table>'
     : '<div class="admin-empty">아직 기록이 없어요.</div>';
 
+  // 미해결률 높은 증상 랭킹 (매뉴얼 보강 필요 신호)
+  const worstUnresolvedHtml = worstUnresolvedRows.length ?
+    '<table class="admin-table"><thead><tr><th></th><th>증상</th><th>미해결률</th><th>담당자연결</th><th>A/S</th><th>총 건수</th></tr></thead><tbody>' +
+    worstUnresolvedRows.map(([sid, s, rate], i) => {
+      const label = (typeof SYMPTOM_LABEL !== 'undefined' && SYMPTOM_LABEL[sid]) ? SYMPTOM_LABEL[sid] : '';
+      const rateClass = rate >= 60 ? 'admin-rate-bad' : (rate < 30 ? 'admin-rate-good' : '');
+      return '<tr><td style="font-size:15px;">'+(i+1)+'</td><td>'+sid+(label ? ' <span style="color:var(--muted); font-size:11.5px;">'+label+'</span>' : '')+'</td>' +
+        '<td class="'+rateClass+'">'+rate+'%</td><td>'+s.escalate+'</td><td>'+s.as+'</td><td>'+s.total+'</td></tr>';
+    }).join('') + '</tbody></table>'
+    : '<div class="admin-empty">아직 판단할 만한 기록(증상당 2건 이상)이 부족해요.</div>';
+
   // 기간별 추이
   const trendHtml =
     '<div style="display:flex; align-items:flex-end; gap:24px; padding:10px 4px 4px;">' +
@@ -3944,6 +3962,7 @@ function renderAdminDashboardContent(events, profiles){
       '<div class="admin-section-title">🏬 브랜드별 비교</div>' + brandHtml +
       '<div class="admin-section-title">🕐 시간대별 발생 패턴</div>' + timeHtml +
       '<div class="admin-section-title">🏆 자주 발생하는 증상 Top 5</div>' + top5Html +
+      '<div class="admin-section-title">🚩 매뉴얼 보강이 필요해 보이는 증상 (미해결률 높은 순)</div>' + worstUnresolvedHtml +
       '<div class="admin-section-title">🩺 증상별 클릭수 · 해결률 · 미해결률</div>' + symptomTableHtml +
       '<div class="admin-section-title">📍 부위/섹터별 클릭수</div>' + deviceTableHtml +
       '<div class="admin-section-title">⏳ 미해결로 남은 최근 건</div>' +
