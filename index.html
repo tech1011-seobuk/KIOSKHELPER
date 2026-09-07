@@ -1721,12 +1721,12 @@ async function loadProfile(user){
   try{
     const { data } = await sb.from('profiles').select('*').eq('id', user.id).single();
     if (data) {
-      currentUser = { id: user.id, email: user.email, displayName: data.display_name || user.email, role: data.role };
+      currentUser = { id: user.id, email: user.email, displayName: data.display_name || user.email, role: data.role, branchName: data.branch_name || null };
     } else {
-      currentUser = { id: user.id, email: user.email, displayName: user.email, role: 'staff' };
+      currentUser = { id: user.id, email: user.email, displayName: user.email, role: 'staff', branchName: null };
     }
   } catch(err){
-    currentUser = { id: user.id, email: user.email, displayName: user.email, role: 'staff' };
+    currentUser = { id: user.id, email: user.email, displayName: user.email, role: 'staff', branchName: null };
   }
 }
 
@@ -3482,6 +3482,7 @@ function renderLoginScreen(){
     (authNotice ? '<div class="'+(authNotice.type==='error'?'login-error':'login-notice')+'">'+authNotice.text+'</div>' : '') +
     '<form id="authForm">' +
       (isSignup ? '<div class="login-field"><label>이름</label><input type="text" id="authName" autocomplete="name" required></div>' : '') +
+      (isSignup ? '<div class="login-field"><label>지점명</label><input type="text" id="authBranch" placeholder="예: 강남점" required></div>' : '') +
       '<div class="login-field"><label>이메일</label><input type="email" id="authEmail" autocomplete="email" required></div>' +
       '<div class="login-field"><label>비밀번호</label><input type="password" id="authPassword" autocomplete="'+(isSignup?'new-password':'current-password')+'" minlength="6" required></div>' +
       '<button type="submit" class="login-submit" id="authSubmitBtn">'+(isSignup ? '회원가입' : '로그인')+'</button>' +
@@ -3524,9 +3525,10 @@ function renderLoginScreen(){
 
     if (isSignup) {
       const name = document.getElementById('authName').value.trim();
+      const branchName = document.getElementById('authBranch').value.trim();
       const { data, error } = await sb.auth.signUp({
         email, password,
-        options: { data: { display_name: name } }
+        options: { data: { display_name: name, branch_name: branchName } }
       });
       if (error) {
         authNotice = { type:'error', text: error.message };
@@ -3706,7 +3708,11 @@ async function renderAdminDashboardScreen(){
 function renderAdminDashboardContent(events, profiles){
   const area = document.getElementById('chatArea');
   const profileMap = {};
-  profiles.forEach(p => profileMap[p.id] = p.display_name || p.email);
+  const branchMap = {};
+  profiles.forEach(p => {
+    profileMap[p.id] = p.display_name || p.email;
+    branchMap[p.id] = p.branch_name || null;
+  });
 
   const deviceClicks = events.filter(e => e.event_type === 'device_click');
   const symptomClicks = events.filter(e => e.event_type === 'symptom_click');
@@ -3908,11 +3914,28 @@ function renderAdminDashboardContent(events, profiles){
     : '<div class="admin-empty">아직 해결 결과 기록이 없어요.</div>';
 
   const userTableHtml = userRows.length ?
-    '<table class="admin-table"><thead><tr><th>직원</th><th>전체 클릭수</th></tr></thead><tbody>' +
+    '<table class="admin-table"><thead><tr><th>직원</th><th>지점</th><th>전체 클릭수</th></tr></thead><tbody>' +
     userRows.map(([uid, count]) =>
-      '<tr><td>'+(profileMap[uid] || '(알수없음)')+'</td><td>'+count+'</td></tr>'
+      '<tr><td>'+(profileMap[uid] || '(알수없음)')+'</td><td>'+(branchMap[uid] || '-')+'</td><td>'+count+'</td></tr>'
     ).join('') + '</tbody></table>'
     : '<div class="admin-empty">아직 기록이 없어요.</div>';
+
+  // 지점별 활동
+  const branchCounts = {};
+  events.forEach(e => {
+    if (!e.user_id) return;
+    const branch = branchMap[e.user_id];
+    if (!branch) return;
+    branchCounts[branch] = (branchCounts[branch] || 0) + 1;
+  });
+  const branchRows = Object.entries(branchCounts).sort((a,b)=>b[1]-a[1]);
+  const maxBranchCount = branchRows.length ? branchRows[0][1] : 1;
+  const branchTableHtml = branchRows.length ?
+    '<table class="admin-table"><thead><tr><th>지점</th><th>전체 클릭수</th></tr></thead><tbody>' +
+    branchRows.map(([name, count]) =>
+      '<tr><td>'+escapeHtml(name)+'</td><td><span class="admin-bar" style="width:'+Math.max(6, Math.round(count/maxBranchCount*80))+'px;"></span>'+count+'</td></tr>'
+    ).join('') + '</tbody></table>'
+    : '<div class="admin-empty">지점명을 입력한 직원의 기록이 아직 없어요.</div>';
 
   // 브랜드별 비교
   const brandHtml =
@@ -3967,6 +3990,7 @@ function renderAdminDashboardContent(events, profiles){
       '<div class="admin-section-title">📍 부위/섹터별 클릭수</div>' + deviceTableHtml +
       '<div class="admin-section-title">⏳ 미해결로 남은 최근 건</div>' +
       '<div style="background:rgba(var(--glass-rgb),.7); border:1px solid var(--border); border-radius:12px; overflow:hidden;">' + recentUnresolvedHtml + '</div>' +
+      '<div class="admin-section-title">🏢 지점별 활동</div>' + branchTableHtml +
       '<div class="admin-section-title">👤 직원별 활동</div>' + userTableHtml +
       '<div class="admin-section-title">💤 활동 없는 직원</div><div>' + inactiveHtml + '</div>' +
     '</div>';
