@@ -541,6 +541,11 @@
     cursor:pointer; margin-top:6px;
   }
   .login-submit:disabled{ opacity:.55; cursor:default; }
+  .remember-email-row{
+    display:flex; align-items:center; gap:7px;
+    font-size:12.5px; color:var(--muted); margin:2px 0 4px; cursor:pointer;
+  }
+  .remember-email-row input{ width:14px; height:14px; accent-color:var(--accent); cursor:pointer; }
   .login-switch{
     text-align:center; margin-top:16px; font-size:13px; color:var(--muted);
   }
@@ -1819,6 +1824,20 @@ async function initAuth(){
   updateUserInfoBar();
   render();
   petBotInit();
+}
+
+const REMEMBERED_EMAIL_KEY = 'kioskHelperLastEmail';
+
+function getRememberedEmail(){
+  try { return localStorage.getItem(REMEMBERED_EMAIL_KEY) || ''; } catch(err){ return ''; }
+}
+
+function setRememberedEmail(email){
+  try { localStorage.setItem(REMEMBERED_EMAIL_KEY, email); } catch(err){}
+}
+
+function clearRememberedEmail(){
+  try { localStorage.removeItem(REMEMBERED_EMAIL_KEY); } catch(err){}
 }
 
 const OFFLINE_QUEUE_KEY = 'kioskHelperOfflineEvents';
@@ -3509,8 +3528,9 @@ function renderLoginScreen(){
     '<form id="authForm">' +
       (isSignup ? '<div class="login-field"><label>이름</label><input type="text" id="authName" autocomplete="name" required></div>' : '') +
       (isSignup ? '<div class="login-field"><label>지점명</label><input type="text" id="authBranch" placeholder="예: 충남 천안 신부점" required><span class="field-hint">CMS 장비명 기준으로 적어주세요. (예: 충남 천안 신부점)</span></div>' : '') +
-      '<div class="login-field"><label>이메일</label><input type="email" id="authEmail" autocomplete="email" required></div>' +
+      '<div class="login-field"><label>이메일</label><input type="email" id="authEmail" autocomplete="email" value="'+(isSignup ? '' : escapeHtml(getRememberedEmail()))+'" required></div>' +
       '<div class="login-field"><label>비밀번호</label><input type="password" id="authPassword" autocomplete="'+(isSignup?'new-password':'current-password')+'" minlength="6" required></div>' +
+      (!isSignup ? '<label class="remember-email-row"><input type="checkbox" id="authRememberEmail" checked> 다음에도 이메일 기억하기</label>' : '') +
       '<button type="submit" class="login-submit" id="authSubmitBtn">'+(isSignup ? '회원가입' : '로그인')+'</button>' +
     '</form>' +
     (!isSignup ? '<div class="login-switch"><button id="authForgotBtn">비밀번호를 잊으셨나요?</button></div>' : '') +
@@ -3578,6 +3598,9 @@ function renderLoginScreen(){
         render();
         return;
       }
+      const rememberBox = document.getElementById('authRememberEmail');
+      if (rememberBox && rememberBox.checked) { setRememberedEmail(email); }
+      else { clearRememberedEmail(); }
       await loadProfile(data.user);
       appState = 'hub';
       authNotice = null;
