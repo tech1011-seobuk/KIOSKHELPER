@@ -3577,7 +3577,7 @@ function renderLoginScreen(){
     (authNotice ? '<div class="'+(authNotice.type==='error'?'login-error':'login-notice')+'">'+authNotice.text+'</div>' : '') +
     '<form id="authForm">' +
       (isSignup ? '<div class="login-field"><label>이름</label><input type="text" id="authName" autocomplete="name" required></div>' : '') +
-      (isSignup ? '<div class="login-field"><label>지점명</label><input type="text" id="authBranch" placeholder="예: 충남 천안 신부점" required><span class="field-hint">CMS 장비명 기준으로 적어주세요. (예: 충남 천안 신부점)</span></div>' : '') +
+      (isSignup ? '<div class="login-field"><label>지점명</label><input type="text" id="authBranch" placeholder="예: 충남 천안 신부점" required><span class="field-hint">지점명 기준으로 적어주세요. (예: 충남 천안 신부점)</span></div>' : '') +
       '<div class="login-field"><label>이메일</label><input type="email" id="authEmail" autocomplete="email" value="'+(isSignup ? '' : escapeHtml(getRememberedEmail()))+'" required></div>' +
       '<div class="login-field"><label>비밀번호</label><input type="password" id="authPassword" autocomplete="'+(isSignup?'new-password':'current-password')+'" minlength="6" required></div>' +
       (!isSignup ? '<label class="remember-email-row"><input type="checkbox" id="authRememberEmail" checked> 다음에도 이메일 기억하기</label>' : '') +
