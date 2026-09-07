@@ -1430,6 +1430,29 @@
   .end-actions .copy-btn:hover{background:var(--escalate); color:#2a1418;}
   .end-actions .copy-btn:disabled{opacity:.75; cursor:default;}
 
+  .feedback-box{
+    margin:12px 0 2px 40px;
+    max-width:420px;
+    background:rgba(var(--glass-rgb),.6);
+    border:1px solid var(--border);
+    border-radius:12px;
+    padding:12px 14px;
+  }
+  .feedback-box .fb-label{ font-size:12px; color:var(--muted); margin-bottom:7px; }
+  .feedback-box textarea{
+    width:100%; box-sizing:border-box; resize:vertical; min-height:52px;
+    background:var(--panel2); border:1px solid var(--border); border-radius:9px;
+    padding:9px 11px; color:var(--text); font-size:13px; font-family:inherit;
+  }
+  .feedback-box textarea:focus{ outline:none; border-color:var(--accent); }
+  .feedback-box .fb-submit{
+    margin-top:8px; background:var(--accent); color:var(--accent-ink); border:none;
+    padding:7px 15px; border-radius:8px; font-size:12.5px; font-weight:700; cursor:pointer; font-family:inherit;
+  }
+  .feedback-box .fb-submit:disabled{ opacity:.6; cursor:default; }
+  .feedback-box .fb-thanks{ font-size:12.5px; color:var(--accent); }
+  @media (max-width:760px){ .feedback-box{ margin-left:0; } }
+
   ::-webkit-scrollbar{width:8px;}
   ::-webkit-scrollbar-thumb{background:#2a2e37; border-radius:8px;}
   ::-webkit-scrollbar-track{background:transparent;}
@@ -1833,7 +1856,8 @@ async function logEvent(eventType, extra){
     device: extra.device || null,
     symptom_id: extra.symptomId || null,
     outcome: extra.outcome || null,
-    detail: extra.detail || null
+    detail: extra.detail || null,
+    feedback: extra.feedback || null
   };
   if (!sb || !navigator.onLine) {
     queueOfflineEvent(payload);
@@ -2354,6 +2378,7 @@ function buildBubbleInner(stepCounter, step, node){
 /* ---- 음성 읽어주기 (자동 모드) ---- */
 let autoSpeakEnabled = false;
 let autoSpokenKeys = new Set();
+let feedbackSubmittedKeys = new Set();
 let cachedFriendlyVoice = null;
 
 if ('speechSynthesis' in window) {
@@ -3785,6 +3810,12 @@ function renderAdminDashboardContent(events, profiles){
     .sort((a,b)=> new Date(b.created_at) - new Date(a.created_at))
     .slice(0, 10);
 
+  // 직원이 남긴 피드백 (최근 10건)
+  const recentFeedback = events
+    .filter(e => e.event_type === 'feedback' && e.feedback)
+    .sort((a,b)=> new Date(b.created_at) - new Date(a.created_at))
+    .slice(0, 10);
+
   // 평균 해결 소요시간 (증상클릭 → 해결 완료, 같은 사용자+증상 기준으로 가장 가까운 클릭과 매칭)
   const clicksBySymptomUser = {};
   symptomClicks.forEach(e => {
@@ -3970,6 +4001,18 @@ function renderAdminDashboardContent(events, profiles){
     }).join('')
     : '<div class="admin-empty">미해결로 남은 최근 건이 없어요.</div>';
 
+  // 직원이 남긴 피드백
+  const feedbackListHtml = recentFeedback.length ?
+    recentFeedback.map(e => {
+      const label = (typeof SYMPTOM_LABEL !== 'undefined' && SYMPTOM_LABEL[e.symptom_id]) ? SYMPTOM_LABEL[e.symptom_id] : (e.symptom_id||'');
+      const when = new Date(e.created_at).toLocaleString('ko-KR', {month:'numeric', day:'numeric', hour:'2-digit', minute:'2-digit'});
+      return '<div class="admin-recent-item" style="display:block;">' +
+        '<div style="color:var(--muted); font-size:11.5px; margin-bottom:4px;">'+(profileMap[e.user_id] || '(알수없음)')+' · '+(e.device||'')+' · '+label+' · '+when+'</div>' +
+        '<div>'+escapeHtml(e.feedback)+'</div>' +
+      '</div>';
+    }).join('')
+    : '<div class="admin-empty">아직 남겨진 의견이 없어요.</div>';
+
   // 활동 없는 직원
   const inactiveHtml = inactiveProfiles.length ?
     inactiveProfiles.map(p => '<span class="admin-inactive-chip">'+(p.display_name || p.email)+'</span>').join('')
@@ -3991,6 +4034,8 @@ function renderAdminDashboardContent(events, profiles){
       '<div class="admin-section-title">📍 부위/섹터별 클릭수</div>' + deviceTableHtml +
       '<div class="admin-section-title">⏳ 미해결로 남은 최근 건</div>' +
       '<div style="background:rgba(var(--glass-rgb),.7); border:1px solid var(--border); border-radius:12px; overflow:hidden;">' + recentUnresolvedHtml + '</div>' +
+      '<div class="admin-section-title">💬 직원이 남긴 의견</div>' +
+      '<div style="background:rgba(var(--glass-rgb),.7); border:1px solid var(--border); border-radius:12px; overflow:hidden;">' + feedbackListHtml + '</div>' +
       '<div class="admin-section-title">🏢 지점별 활동</div>' + branchTableHtml +
       '<div class="admin-section-title">👤 직원별 활동</div>' + userTableHtml +
       '<div class="admin-section-title">💤 활동 없는 직원</div><div>' + inactiveHtml + '</div>' +
@@ -4000,8 +4045,8 @@ function renderAdminDashboardContent(events, profiles){
 }
 
 function exportEventsToCSV(events, profileMap){
-  const headers = ['일시','직원','종류','브랜드','기기','증상ID','결과'];
-  const typeLabel = { device_click:'부위클릭', symptom_click:'증상클릭', symptom_outcome:'결과' };
+  const headers = ['일시','직원','종류','브랜드','기기','증상ID','결과','의견'];
+  const typeLabel = { device_click:'부위클릭', symptom_click:'증상클릭', symptom_outcome:'결과', feedback:'의견' };
   const outcomeLabel = { solved:'해결', escalate:'담당자연결', as:'A/S필요' };
   const rows = events.map(e => [
     new Date(e.created_at).toLocaleString('ko-KR'),
@@ -4010,7 +4055,8 @@ function exportEventsToCSV(events, profileMap){
     e.brand || '',
     e.device || '',
     e.symptom_id || '',
-    outcomeLabel[e.outcome] || ''
+    outcomeLabel[e.outcome] || '',
+    e.feedback || ''
   ]);
   const csvLines = [headers, ...rows].map(row =>
     row.map(cell => '"'+String(cell).replace(/"/g,'""')+'"').join(',')
@@ -4497,6 +4543,29 @@ function renderChat(){
           ? '<button class="copy-btn" onclick="copyHistory(this)">📋 진단 내역 복사하기 (채널톡 문의용)</button>'
           : '');
       inner.appendChild(actions);
+
+      const fbKey = idx + '|' + step.symptomId + '|' + step.endType;
+      const fbBox = document.createElement('div');
+      fbBox.className = 'feedback-box';
+      if (feedbackSubmittedKeys.has(fbKey)) {
+        fbBox.innerHTML = '<div class="fb-thanks">💬 의견 감사합니다!</div>';
+      } else {
+        fbBox.innerHTML = '<div class="fb-label">이 안내에 대한 의견을 남겨주세요 (선택)</div>' +
+          '<textarea placeholder="예: 이 방법으로는 해결이 안 됐고 이렇게 했어요 / 사진이 더 있으면 좋겠어요"></textarea>' +
+          '<button class="fb-submit">보내기</button>';
+        const textarea = fbBox.querySelector('textarea');
+        const submitBtn = fbBox.querySelector('.fb-submit');
+        submitBtn.onclick = async ()=>{
+          const text = textarea.value.trim();
+          if (!text) return;
+          submitBtn.disabled = true;
+          submitBtn.textContent = '보내는 중...';
+          await logEvent('feedback', { brand: symptomSource, device: selectedDevice, symptomId: step.symptomId, outcome: step.endType, feedback: text });
+          feedbackSubmittedKeys.add(fbKey);
+          fbBox.innerHTML = '<div class="fb-thanks">💬 의견 감사합니다!</div>';
+        };
+      }
+      inner.appendChild(fbBox);
 
       if(idx === path.length - 1){
         if(step.endType==='solved' || step.endType==='info'){
