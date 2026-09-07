@@ -546,6 +546,25 @@
     font-size:12.5px; color:var(--muted); margin:2px 0 4px; cursor:pointer;
   }
   .remember-email-row input{ width:14px; height:14px; accent-color:var(--accent); cursor:pointer; }
+
+  .privacy-consent{ margin:6px 0 4px; }
+  .privacy-check-row{
+    display:flex; align-items:center; gap:7px;
+    font-size:12.5px; color:var(--text); cursor:pointer;
+  }
+  .privacy-check-row input{ width:14px; height:14px; accent-color:var(--accent); cursor:pointer; flex-shrink:0; }
+  .privacy-detail-toggle{
+    background:none; border:none; color:var(--muted); font-size:11.5px;
+    cursor:pointer; padding:4px 0 0 21px; font-family:inherit; text-decoration:underline;
+  }
+  .privacy-detail-toggle:hover{ color:var(--accent); }
+  .privacy-detail{
+    margin:8px 0 2px 21px; padding:10px 12px;
+    background:var(--panel2); border:1px solid var(--border); border-radius:9px;
+    font-size:11.5px; color:var(--muted); line-height:1.6;
+  }
+  .privacy-detail div{ margin-bottom:5px; }
+  .privacy-detail div:last-child{ margin-bottom:0; }
   .login-switch{
     text-align:center; margin-top:16px; font-size:13px; color:var(--muted);
   }
@@ -3444,6 +3463,21 @@ function renderCameraColorGuideScreen(){
   document.getElementById('breadcrumb').innerHTML = '카메라<span class="sep">·</span>색감 조정';
 }
 
+const PRIVACY_CONSENT_HTML =
+  '<div class="privacy-consent">' +
+    '<label class="privacy-check-row">' +
+      '<input type="checkbox" id="authPrivacyConsent" required>' +
+      '<span>개인정보 수집·이용에 동의합니다 <b>(필수)</b></span>' +
+    '</label>' +
+    '<button type="button" id="privacyDetailToggle" class="privacy-detail-toggle">자세히 보기 ▾</button>' +
+    '<div class="privacy-detail" id="privacyDetailBox" style="display:none;">' +
+      '<div><b>수집 항목</b>: 이름, 이메일, 지점명, 서비스 이용 기록(클릭·조치 결과·의견)</div>' +
+      '<div><b>수집 목적</b>: 계정 로그인, 지점별 문의 이력 관리, 서비스 개선을 위한 통계 분석</div>' +
+      '<div><b>보유·이용 기간</b>: 회원 탈퇴 또는 계정 삭제 요청 시까지</div>' +
+      '<div><b>동의 거부 권리 및 불이익</b>: 동의를 거부하실 수 있으나, 이 경우 회원가입 및 서비스 이용이 제한됩니다.</div>' +
+    '</div>' +
+  '</div>';
+
 function renderLoginScreen(){
   const area = document.getElementById('chatArea');
   const isSignup = authMode === 'signup';
@@ -3531,6 +3565,7 @@ function renderLoginScreen(){
       '<div class="login-field"><label>이메일</label><input type="email" id="authEmail" autocomplete="email" value="'+(isSignup ? '' : escapeHtml(getRememberedEmail()))+'" required></div>' +
       '<div class="login-field"><label>비밀번호</label><input type="password" id="authPassword" autocomplete="'+(isSignup?'new-password':'current-password')+'" minlength="6" required></div>' +
       (!isSignup ? '<label class="remember-email-row"><input type="checkbox" id="authRememberEmail" checked> 다음에도 이메일 기억하기</label>' : '') +
+      (isSignup ? PRIVACY_CONSENT_HTML : '') +
       '<button type="submit" class="login-submit" id="authSubmitBtn">'+(isSignup ? '회원가입' : '로그인')+'</button>' +
     '</form>' +
     (!isSignup ? '<div class="login-switch"><button id="authForgotBtn">비밀번호를 잊으셨나요?</button></div>' : '') +
@@ -3552,6 +3587,15 @@ function renderLoginScreen(){
       authMode = 'forgot';
       authNotice = null;
       render();
+    };
+  }
+
+  if (isSignup) {
+    document.getElementById('privacyDetailToggle').onclick = (e)=>{
+      const box = document.getElementById('privacyDetailBox');
+      const isHidden = box.style.display === 'none';
+      box.style.display = isHidden ? 'block' : 'none';
+      e.currentTarget.textContent = isHidden ? '자세히 보기 ▴' : '자세히 보기 ▾';
     };
   }
 
