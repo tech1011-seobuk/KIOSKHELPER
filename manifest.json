@@ -1,6 +1,6 @@
 {
-  "name": "PHOTOISM 헬퍼",
-  "short_name": "포토헬퍼",
+  "name": "포토이즘 헬퍼",
+  "short_name": "포토이즘 헬퍼",
   "description": "포토이즘·스내피즘 키오스크 진단 도구",
   "start_url": "./index.html",
   "scope": "./",
