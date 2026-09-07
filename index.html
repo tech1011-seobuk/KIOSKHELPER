@@ -528,6 +528,7 @@
   .login-screen{ max-width:340px; margin:40px auto 0; text-align:left; }
   .login-field{ margin-bottom:14px; }
   .login-field label{ display:block; font-size:12px; color:var(--muted); margin-bottom:5px; }
+  .login-field .field-hint{ display:block; font-size:11px; color:var(--muted); margin-top:5px; line-height:1.4; }
   .login-field input{
     width:100%; box-sizing:border-box;
     background:var(--panel2); border:1px solid var(--border); border-radius:10px;
@@ -3482,7 +3483,7 @@ function renderLoginScreen(){
     (authNotice ? '<div class="'+(authNotice.type==='error'?'login-error':'login-notice')+'">'+authNotice.text+'</div>' : '') +
     '<form id="authForm">' +
       (isSignup ? '<div class="login-field"><label>이름</label><input type="text" id="authName" autocomplete="name" required></div>' : '') +
-      (isSignup ? '<div class="login-field"><label>지점명</label><input type="text" id="authBranch" placeholder="예: 강남점" required></div>' : '') +
+      (isSignup ? '<div class="login-field"><label>지점명</label><input type="text" id="authBranch" placeholder="예: 충남 천안 신부점" required><span class="field-hint">CMS 장비명 기준으로 적어주세요. (예: 충남 천안 신부점)</span></div>' : '') +
       '<div class="login-field"><label>이메일</label><input type="email" id="authEmail" autocomplete="email" required></div>' +
       '<div class="login-field"><label>비밀번호</label><input type="password" id="authPassword" autocomplete="'+(isSignup?'new-password':'current-password')+'" minlength="6" required></div>' +
       '<button type="submit" class="login-submit" id="authSubmitBtn">'+(isSignup ? '회원가입' : '로그인')+'</button>' +
