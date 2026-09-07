@@ -1,4 +1,4 @@
-const CACHE_NAME = 'photoism-helper-v1';
+const CACHE_NAME = 'photoism-helper-v2';
 const URLS_TO_CACHE = [
   './',
   './index.html',
