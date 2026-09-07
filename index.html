@@ -10,6 +10,12 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>PHOTOISM 헬퍼</title>
+<link rel="manifest" href="./manifest.json">
+<meta name="theme-color" content="#1f1f23">
+<link rel="apple-touch-icon" href="./icon-192.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="포토헬퍼">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700;900&family=JetBrains+Mono:wght@500;700&family=Fredoka:wght@500;600;700&display=swap" rel="stylesheet">
@@ -1768,6 +1774,7 @@ async function initAuth(){
     if (session) {
       await loadProfile(session.user);
       appState = 'hub';
+      flushOfflineQueue();
     } else {
       appState = 'login';
     }
@@ -1779,19 +1786,51 @@ async function initAuth(){
   petBotInit();
 }
 
+const OFFLINE_QUEUE_KEY = 'kioskHelperOfflineEvents';
+
+function queueOfflineEvent(payload){
+  try {
+    const queue = JSON.parse(localStorage.getItem(OFFLINE_QUEUE_KEY) || '[]');
+    queue.push(payload);
+    localStorage.setItem(OFFLINE_QUEUE_KEY, JSON.stringify(queue));
+  } catch(err) { /* 저장 실패해도 앱은 계속 동작 */ }
+}
+
+async function flushOfflineQueue(){
+  if (!sb || !navigator.onLine) return;
+  let queue = [];
+  try { queue = JSON.parse(localStorage.getItem(OFFLINE_QUEUE_KEY) || '[]'); } catch(err) { return; }
+  if (!queue.length) return;
+  try {
+    const { error } = await sb.from('events').insert(queue);
+    if (!error) {
+      localStorage.removeItem(OFFLINE_QUEUE_KEY);
+      showToast('☁️', '오프라인 중 남긴 기록 '+queue.length+'건을 저장했어요.');
+    }
+  } catch(err) { /* 아직 못 보냈으면 큐에 그대로 남겨둠 */ }
+}
+
+window.addEventListener('online', flushOfflineQueue);
+
 async function logEvent(eventType, extra){
-  if (!currentUser || !sb) return;
+  if (!currentUser) return;
+  const payload = {
+    user_id: currentUser.id,
+    event_type: eventType,
+    brand: extra.brand || null,
+    device: extra.device || null,
+    symptom_id: extra.symptomId || null,
+    outcome: extra.outcome || null,
+    detail: extra.detail || null
+  };
+  if (!sb || !navigator.onLine) {
+    queueOfflineEvent(payload);
+    return;
+  }
   try{
-    await sb.from('events').insert({
-      user_id: currentUser.id,
-      event_type: eventType,
-      brand: extra.brand || null,
-      device: extra.device || null,
-      symptom_id: extra.symptomId || null,
-      outcome: extra.outcome || null,
-      detail: extra.detail || null
-    });
-  } catch(err){ /* fail silently — never block the UI on logging */ }
+    const { error } = await sb.from('events').insert(payload);
+    if (error) queueOfflineEvent(payload);
+  } catch(err){ queueOfflineEvent(payload); }
 }
 
 document.getElementById('logoutBtn').addEventListener('click', (e)=>{
@@ -4878,6 +4917,12 @@ document.getElementById('themeToggle').addEventListener('click', (e)=>{
 });
 
 initAuth();
+
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('./sw.js').catch(()=>{ /* PWA 등록 실패해도 앱 자체는 정상 동작 */ });
+  });
+}
 </script>
 
 </body>
