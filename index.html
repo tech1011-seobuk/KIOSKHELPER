@@ -749,6 +749,11 @@
 
   /* ===== Camera model select screen ===== */
   .camera-screen{ width:100%; max-width:760px; margin:0 auto; text-align:center; }
+  .hub-tagline{
+    display:inline-block; margin:0 auto 14px; padding:6px 16px;
+    background:var(--accent-dim); border:1px solid var(--accent); border-radius:20px;
+    color:var(--accent); font-size:12.5px; font-weight:700;
+  }
   .camera-title{ font-size:18px; font-weight:800; color:var(--text); margin-bottom:4px; }
   .camera-sub{ font-size:13px; color:var(--muted); margin-bottom:26px; }
   .camera-grid{
@@ -2649,6 +2654,7 @@ function handleAchievements(symptomId){
 }
 
 const HUB_HTML = `<div class="brand-split-screen">
+  <div class="hub-tagline">🐾 세상에 나쁜 키오스크는 없다!</div>
   <div class="camera-title">어떤 브랜드인가요?</div>
   <div class="camera-sub">브랜드를 선택해주세요</div>
   <div class="brand-split">
