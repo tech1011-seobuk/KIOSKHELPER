@@ -1078,7 +1078,16 @@
   }
   .k-stage-cap{ font-size:11px; color:var(--muted); font-family:'JetBrains Mono',monospace; margin-top:8px; letter-spacing:.3px; }
 
-  .hotspot{ position:absolute; transform:translate(-50%,-50%); cursor:pointer; z-index:5; }
+  .hotspot{ position:absolute; transform:translate(-50%,-50%); cursor:pointer; z-index:5; opacity:0; transition:opacity .45s ease; }
+  .hotspot.visible{ opacity:1; }
+
+  @keyframes kioskDrawIn{
+    from{ clip-path:inset(0 0 100% 0); }
+    to{ clip-path:inset(0 0 0% 0); }
+  }
+  .kiosk-svg-draw{
+    animation:kioskDrawIn 1.15s cubic-bezier(.22,.7,.3,1) both;
+  }
   .hotspot .chip{
     background:rgba(var(--glass-rgb),.82);
     backdrop-filter:blur(10px); -webkit-backdrop-filter:blur(10px);
@@ -4190,7 +4199,24 @@ function renderSnapismPickerScreen(){
       }
     });
   });
+  playKioskDrawIn(area);
   loadRecentSymptoms('snapism');
+}
+
+function playKioskDrawIn(area){
+  const svgs = area.querySelectorAll('.k-stage svg');
+  svgs.forEach((svg, i)=>{
+    svg.classList.remove('kiosk-svg-draw');
+    void svg.getBoundingClientRect(); // 리플로우 강제 (애니메이션 재시작용)
+    svg.style.animationDelay = (i * 120) + 'ms';
+    svg.classList.add('kiosk-svg-draw');
+  });
+  const hotspots = area.querySelectorAll('.hotspot');
+  hotspots.forEach(h => h.classList.remove('visible'));
+  const baseDelay = svgs.length ? 1150 + (svgs.length - 1) * 120 : 0;
+  hotspots.forEach((h, i)=>{
+    setTimeout(()=> h.classList.add('visible'), baseDelay + i * 70);
+  });
 }
 
 function goToPhotoismTools(){
@@ -4440,6 +4466,7 @@ function renderPickerScreen(){
       setTimeout(()=> selectDeviceFromPicker(h.dataset.device), 220);
     });
   });
+  playKioskDrawIn(area);
   loadRecentSymptoms('photoism');
 }
 
