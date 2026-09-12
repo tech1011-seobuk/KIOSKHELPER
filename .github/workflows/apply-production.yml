@@ -1,0 +1,87 @@
+name: 본 서버 적용
+run-name: 본 서버 적용 · ${{ inputs.mode }} · ${{ github.actor }}
+on:
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: "apply: 본 서버 적용 / check: 검사만"
+        type: choice
+        options: [apply, check]
+        default: apply
+        required: true
+permissions:
+  contents: read
+concurrency:
+  group: production-application
+  cancel-in-progress: false
+jobs:
+  build:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/checkout@v6
+        with:
+          repository: tech1011-seobuk/kioskhelper-staging
+          ref: main
+          path: staging-source
+          persist-credentials: false
+      - name: 테스트 서버 버전 고정 및 코드 보관
+        run: |
+          mkdir -p release-backup
+          git archive HEAD > release-backup/before.tar
+          git -C staging-source rev-parse HEAD > release-backup/staging-commit.txt
+          cat release-backup/staging-commit.txt >> "$GITHUB_STEP_SUMMARY"
+      - name: 본 서버 설정 변환 및 검사
+        run: |
+          node prepare-production.mjs staging-source production-bundle "$(date +%s)${GITHUB_RUN_ATTEMPT}"
+          KIOSKHELPER_TEST_ROOT="$PWD/production-bundle" node --test staging-source/regression.test.mjs
+          node --test staging-source/diagnosis.test.mjs
+      - uses: actions/upload-artifact@v4
+        with:
+          name: production-backup-and-source
+          path: release-backup
+          retention-days: 90
+      - uses: actions/upload-pages-artifact@v4
+        with:
+          path: production-bundle
+      - uses: actions/upload-artifact@v4
+        with:
+          name: production-bundle
+          path: production-bundle
+          include-hidden-files: true
+  apply:
+    if: inputs.mode == 'apply'
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: main
+      - uses: actions/download-artifact@v4
+        with:
+          name: production-bundle
+          path: production-bundle
+      - name: 적용 코드와 이전 버전 기록
+        run: |
+          cp -R production-bundle/. .
+          rm -rf production-bundle
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add index.html sw.js manifest.json icon-192.png icon-512.png .nojekyll
+          for dir in assets css js images fonts; do
+            if [ -d "$dir" ]; then git add "$dir"; fi
+          done
+          git commit -m "Apply tested staging application (run $GITHUB_RUN_ID)"
+          git push origin HEAD:main
+      - uses: actions/configure-pages@v5
+      - name: 본 서버 적용
+        id: deployment
+        uses: actions/deploy-pages@v4
