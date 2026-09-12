@@ -1,4 +1,4 @@
-const CACHE_NAME = 'photoism-helper-v15';
+const CACHE_NAME = 'photoism-helper-v16';
 const OWN_CACHE_PATTERN = /^photoism-helper-v[0-9]+$/;
 const APP_SCOPE = new URL('./', self.location.href);
 const SDK_URL = 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js';
