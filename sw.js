@@ -1,9 +1,10 @@
-const CACHE_NAME = 'photoism-helper-v16';
+const CACHE_NAME = 'photoism-helper-v17899590001';
 const OWN_CACHE_PATTERN = /^photoism-helper-v[0-9]+$/;
 const APP_SCOPE = new URL('./', self.location.href);
 const SDK_URL = 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js';
 const URLS_TO_CACHE = ['./', './index.html', './manifest.json', './icon-192.png', './icon-512.png'];
-const STATIC_URLS = new Set(URLS_TO_CACHE.map(path => new URL(path, APP_SCOPE).href));
+const MODEL_URLS = ['./assets/camera-m50.glb','./assets/camera-850d.glb','./assets/camera-r10.glb','./assets/printer-rx1.glb','./assets/printer-ask400.glb','./assets/photoism-kiosk-door.glb'];
+const STATIC_URLS = new Set([...URLS_TO_CACHE,...MODEL_URLS].map(path => new URL(path, APP_SCOPE).href));
 const PAGE_URLS = new Set([APP_SCOPE.href, new URL('index.html', APP_SCOPE).href]);
 
 self.addEventListener('install', event => {
@@ -11,6 +12,7 @@ self.addEventListener('install', event => {
     const cache = await caches.open(CACHE_NAME);
     // A failed core download keeps the previous working version installed.
     await cache.addAll(URLS_TO_CACHE);
+    await Promise.all(MODEL_URLS.map(url=>cache.add(url).catch(()=>{})));
     try { await cache.add(SDK_URL); } catch { /* SDK can be cached on its next successful request. */ }
     await self.skipWaiting();
   })());
