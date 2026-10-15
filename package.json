@@ -1,0 +1,13 @@
+{
+  "name": "photoism-helper-production",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "node --test regression.test.mjs diagnosis.test.mjs cms-mapping.test.mjs cms-membership.test.mjs",
+    "build:cms": "node build-cms.cjs"
+  },
+  "devDependencies": {
+    "esbuild": "0.25.10",
+    "fast-xml-parser": "5.11.2"
+  }
+}

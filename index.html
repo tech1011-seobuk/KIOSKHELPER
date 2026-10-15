@@ -5893,10 +5893,37 @@ void main() {
 const APP_ENV = 'production';
 const SUPABASE_URL = 'https://lsetixbyarexggxsihen.supabase.co';
 const SUPABASE_ANON_KEY = 'sb_publishable_hbv-ismSGLV_QDHffrT-qA_PK3X81XO';
+function createHelperAuthStorage(local, session, preferenceKey){
+  const memory=new Map(),keys=new Set();
+  const read=(store,key)=>{try{return store.getItem(key);}catch{return null;}};
+  const remove=(store,key)=>{try{store.removeItem(key);}catch{}};
+  const write=(store,key,value)=>{try{store.setItem(key,value);return true;}catch{return false;}};
+  let persistent=read(local,preferenceKey)==='true';
+  return {
+    get persistent(){return persistent;},
+    setPersistent(value){
+      const values=[...keys].map(key=>[key,this.getItem(key)]);
+      persistent=!!value;
+      write(local,preferenceKey,String(persistent));
+      for(const [key,data] of values)if(data!==null)this.setItem(key,data);
+    },
+    getItem(key){
+      keys.add(key);
+      const chosen=persistent?local:session,other=persistent?session:local;
+      let value=read(chosen,key);
+      if(value===null)value=read(other,key); // Preserve the active session during migration.
+      if(value!==null){if(!write(chosen,key,value))memory.set(key,value);remove(other,key);return value;}
+      return memory.get(key)??null;
+    },
+    setItem(key,value){keys.add(key);if(write(persistent?local:session,key,value))memory.delete(key);else memory.set(key,value);remove(persistent?session:local,key);},
+    removeItem(key){keys.add(key);memory.delete(key);remove(local,key);remove(session,key);}
+  };
+}
+const helperAuthStorage=createHelperAuthStorage(window.localStorage,window.sessionStorage,'kioskHelperAutoLogin:'+APP_ENV);
 let sb = null;
 let sdkLoadFailed = false;
 try {
-  sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+  sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY,{auth:{persistSession:true,storage:helperAuthStorage}});
 } catch(err) {
   sdkLoadFailed = true;
 }
@@ -5906,20 +5933,21 @@ let authMode = 'login'; // 'login' | 'signup'
 let authNotice = null;  // {type:'error'|'info', text}
 
 async function loadProfile(user){
-  try{
-    const { data } = await sb.from('profiles').select('*').eq('id', user.id).single();
-    if (data) {
-      currentUser = { id: user.id, email: user.email, displayName: data.display_name || user.email, role: data.role, branchName: data.branch_name || null };
-    } else {
-      currentUser = { id: user.id, email: user.email, displayName: user.email, role: 'staff', branchName: null };
-    }
-  } catch(err){
-    currentUser = { id: user.id, email: user.email, displayName: user.email, role: 'staff', branchName: null };
+  currentUser=null;
+  const {data,error}=await sb.from('profiles').select('*').eq('id',user.id).single();
+  if(error||!data)throw new Error('승인된 계정 정보를 확인하지 못했어요. 관리자에게 문의해주세요.');
+  if(data.role==='admin')currentUser={id:user.id,email:user.email,displayName:data.display_name||user.email,role:'admin',branchName:data.branch_name||null};
+  else{
+    const membership=await cmsRequest('session');
+    if(!membership.cmsId||!Array.isArray(membership.stores)||!membership.stores.length)throw new Error('연결된 지점 정보를 확인하지 못했어요.');
+    let saved=null;try{saved=sessionStorage.getItem(cmsStoreKey(user.id));}catch{}
+    currentUser={id:user.id,displayName:membership.cmsId,cmsId:membership.cmsId,role:'staff',stores:membership.stores,branchName:cmsChooseInitialStore(membership.stores,saved)};
   }
   await loadPublishedDiagnosis();
 }
 
 function updateUserInfoBar(){
+  updateCmsStoreButton();
   updateDiagnosisNotice();
   const info = document.getElementById('userInfo');
   const logoutBtn = document.getElementById('logoutBtn');
@@ -5947,7 +5975,9 @@ function updateUserInfoBar(){
 }
 
 async function handleLogout(){
+  if(currentUser)try{sessionStorage.removeItem(cmsStoreKey(currentUser.id));}catch{}
   if (sb) { await sb.auth.signOut(); }
+  helperAuthStorage.setPersistent(false);
   currentUser = null;
   appState = 'login';
   authMode = 'login';
@@ -5979,12 +6009,14 @@ async function initAuth(){
     const { data: { session } } = await sb.auth.getSession();
     if (session) {
       await loadProfile(session.user);
-      appState = 'hub';
+      appState = cmsNextScreen();
       flushOfflineQueue();
     } else {
       appState = 'login';
     }
   } catch(err){
+    currentUser=null;
+    authNotice={type:'error',text:err.message||'계정 정보를 확인하지 못했어요. 다시 로그인해주세요.'};
     appState = 'login';
   }
   updateUserInfoBar();
@@ -6079,9 +6111,10 @@ async function flushOfflineQueue(){
 window.addEventListener('online', flushOfflineQueue);
 
 async function logEvent(eventType, extra){
-  if (!currentUser) return;
+  if (!currentUser || (currentUser.cmsId && !currentUser.branchName)) return;
   const payload = {
     user_id: currentUser.id,
+    branch_name: currentUser.branchName || null,
     event_type: eventType,
     brand: extra.brand || null,
     device: extra.device || null,
@@ -7612,6 +7645,143 @@ function renderCameraColorGuideScreen(){
   document.getElementById('breadcrumb').innerHTML = (model?model.sub:'카메라')+'<span class="sep">·</span>색감 조정';
 }
 
+/* CMS MEMBERSHIP START */
+/* CMS membership UI. Embedded by sync-community.cjs; contains no S3 credentials. */
+const CMS_MESSAGES={
+ CMS_ID_NOT_FOUND:'CMS에 등록된 ID를 찾지 못했어요. ID를 확인해주세요.',
+ CMS_ID_NEEDS_REVIEW:'CMS 원본 ID에 공백 또는 중복 문제가 있어요. 관리자에게 확인을 요청해주세요.',
+ CMS_ID_INVALID:'CMS ID를 확인해주세요.',
+ ALREADY_REGISTERED:'이미 가입 신청된 CMS ID예요. 승인 여부를 관리자에게 확인해주세요.',
+ LOGIN_NOT_AVAILABLE:'ID·비밀번호 또는 관리자 승인 여부를 확인해주세요.',
+ PASSWORD_INVALID:'헬퍼 비밀번호는 8~128자로 입력해주세요.',
+ APPROVAL_REQUIRED:'관리자 승인 후 이용할 수 있어요.',
+ LOGIN_REQUIRED:'다시 로그인해주세요.',
+ ADMIN_REQUIRED:'관리자 계정만 이용할 수 있어요.',
+ TOO_MANY_REQUESTS:'요청이 많아요. 10분 뒤 다시 시도해주세요.',
+ MEMBER_CHANGED:'다른 관리자가 처리한 신청이에요. 목록을 새로 확인해주세요.'
+};
+async function cmsRequest(action,values={}){
+ const {data,error}=await sb.functions.invoke('cms-membership',{body:{action,...values}});
+ if(error||data?.error){
+  let code=data?.error;
+  if(!code&&error?.context)try{code=(await error.context.json()).error;}catch{}
+  throw new Error(CMS_MESSAGES[code]||'회원 정보를 확인하지 못했어요. 잠시 후 다시 시도해주세요.');
+ }
+ return data;
+}
+function cmsStoreKey(userId){return 'helperSelectedStore:'+APP_ENV+':'+userId;}
+function cmsChooseInitialStore(stores,saved){
+ return stores.length===1?stores[0]:stores.includes(saved)?saved:null;
+}
+function cmsNextScreen(){return currentUser?.cmsId&&!currentUser.branchName?'storeSelect':'hub';}
+function renderCmsAuthScreen(){
+ const area=document.getElementById('chatArea'),signup=authMode==='signup',admin=authMode==='admin';
+ const wrap=document.createElement('div');wrap.className='login-screen';
+ wrap.innerHTML='<div class="hub-title">'+(signup?'회원가입':admin?'관리자 로그인':'로그인')+'</div>'+
+ '<div class="hub-sub">'+(signup?'CMS ID를 확인한 뒤 관리자에게 가입 승인을 요청합니다.':admin?'기존 관리자 이메일과 비밀번호를 입력해주세요.':'CMS ID와 헬퍼 비밀번호를 입력해주세요.')+'</div>'+
+ (authNotice?'<div role="status" class="'+(authNotice.type==='error'?'login-error':'login-notice')+'">'+escapeHtml(authNotice.text)+'</div>':'')+
+ '<form id="authForm"><div class="login-field"><label for="authIdentity">'+(admin?'관리자 이메일':'CMS ID')+'</label><input id="authIdentity" type="'+(admin?'email':'text')+'" autocomplete="username" maxlength="100" '+(admin?'value="'+escapeHtml(getRememberedEmail())+'"':'')+' required></div>'+
+ '<div class="login-field"><label for="authPassword">'+(admin?'비밀번호':'헬퍼 비밀번호')+'</label><input id="authPassword" type="password" autocomplete="'+(signup?'new-password':'current-password')+'" minlength="'+(admin?6:8)+'" maxlength="128" required></div>'+
+ (signup?'<div class="field-hint">CMS 비밀번호와 별도로, 헬퍼에서 사용할 비밀번호를 만들어주세요.</div><div class="login-field"><label for="authPasswordConfirm">비밀번호 확인</label><input id="authPasswordConfirm" type="password" autocomplete="new-password" minlength="8" maxlength="128" aria-describedby="passwordMatchStatus" required><span id="passwordMatchStatus" class="field-hint" role="status" aria-live="polite"></span></div>'+PRIVACY_CONSENT_HTML:'<label class="remember-email-row"><input id="authAutoLogin" type="checkbox" '+(helperAuthStorage.persistent?'checked':'')+'> 자동 로그인</label>')+
+ (admin?'<label class="remember-email-row"><input id="authRememberEmail" type="checkbox" checked> 다음에도 이메일 기억하기</label>':'')+
+ '<button class="login-submit" id="authSubmitBtn" type="submit">'+(signup?'가입 승인 요청':'로그인')+'</button></form>'+
+ '<div class="login-switch"><button id="authSwitchBtn">'+(signup||admin?'일반 로그인으로 돌아가기':'회원가입')+'</button></div>'+
+ (!signup&&!admin?'<div class="login-switch"><button id="authAdminBtn">관리자 로그인</button></div><div class="field-hint">가입 승인·비밀번호 문의는 관리자에게 요청해주세요.</div>':'')+
+ (admin?'<div class="login-switch"><button id="authForgotBtn">관리자 비밀번호 찾기</button></div>':'');
+ area.replaceChildren(wrap);document.getElementById('breadcrumb').textContent='PHOTOISM 헬퍼';
+ wrap.querySelector('#authSwitchBtn').onclick=()=>{authMode=signup||admin?'login':'signup';authNotice=null;render();};
+ const adminBtn=wrap.querySelector('#authAdminBtn');if(adminBtn)adminBtn.onclick=()=>{authMode='admin';authNotice=null;render();};
+ const forgot=wrap.querySelector('#authForgotBtn');if(forgot)forgot.onclick=()=>{authMode='forgot';authNotice=null;render();};
+ if(signup){
+  const first=wrap.querySelector('#authPassword'),confirm=wrap.querySelector('#authPasswordConfirm'),status=wrap.querySelector('#passwordMatchStatus');
+  const check=()=>{const s=signupPasswordState(first.value,confirm.value);status.textContent=s.message;confirm.setCustomValidity(s.matches?'':s.message);confirm.setAttribute('aria-invalid',String(!s.empty&&!s.matches));};
+  first.oninput=confirm.oninput=check;check();
+  wrap.querySelector('#privacyDetailToggle').onclick=()=>{const box=wrap.querySelector('#privacyDetailBox');box.style.display=box.style.display==='none'?'block':'none';};
+ }
+ wrap.querySelector('#authForm').onsubmit=async e=>{
+  e.preventDefault();if(!sb)return;
+  const button=wrap.querySelector('#authSubmitBtn'),identity=wrap.querySelector('#authIdentity').value.trim(),password=wrap.querySelector('#authPassword').value;
+  button.disabled=true;button.textContent='확인 중...';
+  try{
+   if(signup){
+    if(!await showSharedAccountPolicy())return;
+    const result=await cmsRequest('signup',{cmsId:identity,password,consent:wrap.querySelector('#authPrivacyConsent').checked});
+    authMode='login';authNotice={type:'info',text:'가입 신청이 접수됐어요. 연결된 지점 '+result.storeCount+'개를 확인했으며, 관리자 승인 후 로그인할 수 있어요.'};render();return;
+   }
+   helperAuthStorage.setPersistent(wrap.querySelector('#authAutoLogin').checked);
+   let user;
+   if(admin){
+    const {data,error}=await sb.auth.signInWithPassword({email:identity,password});
+    if(error)throw new Error('관리자 이메일 또는 비밀번호를 확인해주세요.');
+    user=data.user;
+    const {data:profile,error:profileError}=await sb.from('profiles').select('role').eq('id',user.id).single();
+    if(profileError||profile?.role!=='admin'){await sb.auth.signOut();throw new Error('관리자 계정만 이 로그인 방식을 사용할 수 있어요.');}
+    if(wrap.querySelector('#authRememberEmail').checked)setRememberedEmail(identity);else clearRememberedEmail();
+   }else{
+    const result=await cmsRequest('login',{cmsId:identity,password});
+    const {data,error}=await sb.auth.setSession(result.session);if(error)throw new Error('로그인을 완료하지 못했어요. 다시 시도해주세요.');user=data.user;
+   }
+   try{sessionStorage.removeItem(cmsStoreKey(user.id));}catch{}
+   await loadProfile(user);appState=cmsNextScreen();authNotice=null;flushOfflineQueue();updateUserInfoBar();render();
+  }catch(error){currentUser=null;authNotice={type:'error',text:error.message};render();}
+  finally{button.disabled=false;button.textContent=signup?'가입 승인 요청':'로그인';}
+ };
+}
+function renderStoreSelection(){
+ const area=document.getElementById('chatArea');
+ if(!currentUser?.cmsId){appState='login';render();return;}
+ const wrap=document.createElement('div');wrap.className='login-screen';wrap.style.maxWidth='580px';
+ wrap.innerHTML='<div class="hub-title">이용할 지점 선택</div><div class="hub-sub">'+escapeHtml(currentUser.cmsId)+'에 연결된 '+currentUser.stores.length+'개 지점 중 선택해주세요.</div><div class="login-field"><label for="cmsStoreSearch">지점명 검색</label><input id="cmsStoreSearch" type="search" autocomplete="off" placeholder="지점 이름을 입력해주세요"></div><div id="cmsStoreResults" role="status" aria-live="polite" class="field-hint"></div><div id="cmsStoreList" style="display:grid;gap:10px;max-height:52vh;overflow:auto;padding:8px 2px"></div>';
+ area.replaceChildren(wrap);document.getElementById('breadcrumb').textContent='지점 선택';
+ const list=wrap.querySelector('#cmsStoreList');
+ const draw=()=>{
+  const query=wrap.querySelector('#cmsStoreSearch').value.trim().toLocaleLowerCase('ko');
+  const stores=currentUser.stores.filter(s=>s.toLocaleLowerCase('ko').includes(query));list.replaceChildren();
+  wrap.querySelector('#cmsStoreResults').textContent=stores.length?stores.length+'개 지점':'검색된 지점이 없어요.';
+  for(const store of stores){const b=document.createElement('button');b.type='button';b.className='signup-store-option';b.style.cssText='width:100%;text-align:left;padding:18px;border:1px solid var(--border);border-radius:12px;white-space:normal;overflow-wrap:anywhere';b.textContent=store+' →';b.onclick=()=>{
+   currentUser.branchName=store;try{sessionStorage.setItem(cmsStoreKey(currentUser.id),store);}catch{}
+   path=[];if(typeof helperAttempt!=='undefined')helperAttempt=null;selectedDevice=null;appState='hub';updateUserInfoBar();render();
+  };list.appendChild(b);}
+ };wrap.querySelector('#cmsStoreSearch').oninput=draw;draw();
+}
+function updateCmsStoreButton(){
+ let button=document.getElementById('cmsStoreSwitch');
+ if(!button){button=document.createElement('button');button.id='cmsStoreSwitch';button.className='reset-btn';button.style.maxWidth='100%';button.style.whiteSpace='normal';document.getElementById('userInfo').after(button);}
+ button.hidden=!currentUser?.cmsId;
+ if(!currentUser?.cmsId)return;
+ button.textContent=(currentUser.branchName||'지점 선택')+(currentUser.stores.length>1?' · 변경':'');
+ button.disabled=currentUser.stores.length<2;
+ button.onclick=()=>{path=[];if(typeof helperAttempt!=='undefined')helperAttempt=null;selectedDevice=null;currentUser.branchName=null;try{sessionStorage.removeItem(cmsStoreKey(currentUser.id));}catch{}appState='storeSelect';updateUserInfoBar();render();};
+}
+async function renderCmsApprovals(offset=0){
+ const area=document.getElementById('chatArea');
+ if(currentUser?.role!=='admin'){appState='login';render();return;}
+ const owner=currentUser.id;
+ area.innerHTML='<div class="admin-screen"><div class="hub-title">회원 가입 승인</div><div role="status">불러오는 중...</div></div>';
+ document.getElementById('breadcrumb').textContent='관리자 · 회원 가입 승인';
+ try{
+  const {members}=await cmsRequest('list',{offset});
+  if(currentUser?.id!==owner||appState!=='cmsApprovals')return;
+  const wrap=document.createElement('div');wrap.className='admin-screen';
+  wrap.innerHTML='<div class="hub-title">회원 가입 승인</div><div class="hub-sub">CMS ID와 연결 지점을 확인한 뒤 이용을 승인해주세요.</div>';
+  if(!members.length){const p=document.createElement('p');p.textContent='가입 신청이 없어요.';wrap.appendChild(p);}
+  for(const m of members){
+   const card=document.createElement('section');card.style.cssText='border:1px solid var(--border);border-radius:14px;padding:20px;margin:16px 0;overflow-wrap:anywhere';
+   card.innerHTML='<h3>'+escapeHtml(m.cms_id)+'</h3><p>'+({pending:'승인 대기',approved:'승인 완료',rejected:'신청 반려'}[m.status]||'확인 필요')+' · '+escapeHtml(new Date(m.created_at).toLocaleString('ko-KR'))+'</p><details><summary>연결 지점 '+m.stores.length+'개 보기</summary><ul>'+m.stores.map(s=>'<li>'+escapeHtml(s)+'</li>').join('')+'</ul></details>';
+   const status=document.createElement('p');status.setAttribute('role','status');card.appendChild(status);
+   const action=(label,name)=>{const b=document.createElement('button');b.className='signup-store-option';b.textContent=label;b.style.margin='12px 8px 0 0';b.onclick=async()=>{const buttons=[...card.querySelectorAll('button')];buttons.forEach(x=>x.disabled=true);try{await cmsRequest(name,{userId:m.user_id});await renderCmsApprovals(offset);}catch(e){status.textContent=e.message;buttons.forEach(x=>x.disabled=false);}};card.appendChild(b);};
+   if(m.status==='pending'){action('이용 승인','approve');action('신청 반려','reject');}
+   if(m.status==='approved')action('로그인 활성화 재시도','approve');
+   wrap.appendChild(card);
+  }
+  const nav=document.createElement('div');
+  for(const [label,next] of [['이전',Math.max(0,offset-50)],['다음',offset+50]]){const b=document.createElement('button');b.className='signup-store-option';b.textContent=label;b.disabled=label==='이전'?offset===0:members.length<50;b.onclick=()=>renderCmsApprovals(next);nav.appendChild(b);}
+  wrap.appendChild(nav);area.replaceChildren(wrap);
+ }catch(e){if(currentUser?.id===owner&&appState==='cmsApprovals'){area.textContent=e.message;}}
+}
+
+/* CMS MEMBERSHIP END */
+
 const PRIVACY_CONSENT_HTML =
   '<div class="privacy-consent">' +
     '<label class="privacy-check-row">' +
@@ -7620,7 +7790,7 @@ const PRIVACY_CONSENT_HTML =
     '</label>' +
     '<button type="button" id="privacyDetailToggle" class="privacy-detail-toggle">자세히 보기 ▾</button>' +
     '<div class="privacy-detail" id="privacyDetailBox" style="display:none;">' +
-      '<div><b>수집 항목</b>: 이름, 이메일, 지점명, 서비스 이용 기록(클릭·조치 결과·의견)</div>' +
+      '<div><b>수집 항목</b>: CMS ID, 연결 지점명, 헬퍼 계정 정보, 서비스 이용 기록(클릭·조치 결과·의견)</div>' +
       '<div><b>수집 목적</b>: 계정 로그인, 지점별 문의 이력 관리, 서비스 개선을 위한 통계 분석</div>' +
       '<div><b>보유·이용 기간</b>: 회원 탈퇴 또는 계정 삭제 요청 시까지</div>' +
       '<div><b>동의 거부 권리 및 불이익</b>: 동의를 거부하실 수 있으나, 이 경우 회원가입 및 서비스 이용이 제한됩니다.</div>' +
@@ -7636,7 +7806,7 @@ function showSharedAccountPolicy(){
  return new Promise(resolve=>{
   const dialog=document.createElement('dialog');dialog.className='signup-dialog';
   dialog.setAttribute('aria-labelledby','sharedAccountTitle');
-  dialog.innerHTML='<h2 id="sharedAccountTitle">매장 계정 이용 안내</h2><p>매장당 계정은 <strong>1개만 승인됩니다.</strong></p><p>점주 또는 관리자가 여러 명인 경우, 해당 매장 계정을 공동으로 사용해주세요.</p><button type="button" class="login-submit" id="sharedAccountContinue">확인하고 계속</button><button type="button" class="signup-store-option" id="sharedAccountCancel">취소</button>';
+  dialog.innerHTML='<h2 id="sharedAccountTitle">CMS 계정 이용 안내</h2><p>CMS ID당 헬퍼 계정 1개를 신청할 수 있으며, <strong>관리자 승인 후 이용할 수 있어요.</strong></p><p>여러 지점이 연결된 ID는 로그인 후 이용할 지점을 선택합니다.</p><button type="button" class="login-submit" id="sharedAccountContinue">확인하고 가입 요청</button><button type="button" class="signup-store-option" id="sharedAccountCancel">취소</button>';
   let accepted=false;
   dialog.addEventListener('close',()=>{dialog.remove();resolve(accepted);},{once:true});
   dialog.querySelector('#sharedAccountContinue').onclick=()=>{accepted=true;dialog.close();};
@@ -7646,6 +7816,7 @@ function showSharedAccountPolicy(){
 }
 
 function renderLoginScreen(){
+  if(authMode!=='forgot'&&authMode!=='updatePassword'){renderCmsAuthScreen();return;}
   const area = document.getElementById('chatArea');
   const isSignup = authMode === 'signup';
   const isForgot = authMode === 'forgot';
@@ -7722,94 +7893,6 @@ function renderLoginScreen(){
     return;
   }
 
-  wrap.innerHTML =
-    '<div class="hub-title">'+(isSignup ? '회원가입' : '로그인')+'</div>' +
-    '<div class="hub-sub">'+(isSignup ? 'CMS ID로 이용하는 새 가입 화면입니다.' : 'PHOTOISM 헬퍼에 로그인해주세요.')+'</div>' +
-    (authNotice ? '<div class="'+(authNotice.type==='error'?'login-error':'login-notice')+'">'+authNotice.text+'</div>' : '') +
-    '<form id="authForm">' +
-      (isSignup ? '<div class="login-notice" role="status">새 회원가입을 준비 중입니다. 현재 입력한 정보는 전송·저장되지 않으며 가입 신청은 접수되지 않습니다.</div><div class="login-field"><label for="authCmsId">CMS ID</label><input type="text" id="authCmsId" autocomplete="username" maxlength="100" required></div>' : '<div class="login-field"><label for="authEmail">이메일</label><input type="email" id="authEmail" autocomplete="email" value="'+escapeHtml(getRememberedEmail())+'" required></div>') +
-      '<div class="login-field"><label>비밀번호</label><input type="password" id="authPassword" autocomplete="'+(isSignup?'new-password':'current-password')+'" minlength="6" required></div>' +
-      (isSignup ? '<div class="login-field"><label for="authPasswordConfirm">비밀번호 확인</label><input type="password" id="authPasswordConfirm" aria-describedby="passwordMatchStatus" autocomplete="new-password" minlength="6" required><span class="field-hint" id="passwordMatchStatus" role="status" aria-live="polite">비밀번호를 한 번 더 입력해주세요.</span></div>' : '') +
-      (!isSignup ? '<label class="remember-email-row"><input type="checkbox" id="authRememberEmail" checked> 다음에도 이메일 기억하기</label>' : '') +
-      '' +
-      '<button type="submit" class="login-submit" id="authSubmitBtn">'+(isSignup ? '회원가입' : '로그인')+'</button>' +
-    '</form>' +
-    (!isSignup ? '<div class="login-switch"><button id="authForgotBtn">비밀번호를 잊으셨나요?</button></div>' : '') +
-    '<div class="login-switch">' +
-      (isSignup ? '이미 계정이 있으신가요? <button id="authSwitchBtn">로그인</button>' : '계정이 없으신가요? <button id="authSwitchBtn">회원가입</button>') +
-    '</div>';
-  area.innerHTML = '';
-  area.appendChild(wrap);
-  document.getElementById('breadcrumb').innerHTML = 'PHOTOISM 헬퍼';
-
-  document.getElementById('authSwitchBtn').onclick = ()=>{
-    authMode = isSignup ? 'login' : 'signup';
-    authNotice = null;
-    render();
-  };
-
-  if (!isSignup) {
-    document.getElementById('authForgotBtn').onclick = ()=>{
-      authMode = 'forgot';
-      authNotice = null;
-      render();
-    };
-  }
-
-  if (isSignup) {
-    const confirmPassword=document.getElementById('authPasswordConfirm');
-    const firstPassword=document.getElementById('authPassword');
-    const checkPasswords=()=>{
-      const state=signupPasswordState(firstPassword.value,confirmPassword.value);
-      const status=document.getElementById('passwordMatchStatus');
-      status.textContent=state.message;
-      status.style.color=state.empty?'':state.matches?'#4ade80':'#ff8080';
-      confirmPassword.setCustomValidity(state.matches?'':state.message);
-      confirmPassword.setAttribute('aria-invalid',String(!state.empty&&!state.matches));
-      document.getElementById('authSubmitBtn').disabled=!state.matches;
-    };
-    confirmPassword.addEventListener('input',checkPasswords);
-    firstPassword.addEventListener('input',checkPasswords);
-    checkPasswords();
-
-  }
-
-  document.getElementById('authForm').onsubmit = async (e)=>{
-    e.preventDefault();
-    if (!sb) {
-      authNotice = { type:'error', text:'로그인 기능을 불러오지 못했어요. 새로고침 후 다시 시도해주세요.' };
-      render();
-      return;
-    }
-    const submitBtn = document.getElementById('authSubmitBtn');
-    const email = isSignup ? '' : document.getElementById('authEmail').value.trim();
-    const password = document.getElementById('authPassword').value;
-    submitBtn.disabled = true;
-    submitBtn.textContent = '처리 중...';
-    authNotice = null;
-
-    if (isSignup) {
-      const accepted = await showSharedAccountPolicy();
-      submitBtn.disabled=false;submitBtn.textContent='회원가입';
-      if(accepted)showToast('안내','회원가입 준비 중입니다. 입력한 정보는 저장되지 않았습니다.');
-    } else {
-      const { data, error } = await sb.auth.signInWithPassword({ email, password });
-      if (error) {
-        authNotice = { type:'error', text: '이메일 또는 비밀번호가 올바르지 않아요.' };
-        render();
-        return;
-      }
-      const rememberBox = document.getElementById('authRememberEmail');
-      if (rememberBox && rememberBox.checked) { setRememberedEmail(email); }
-      else { clearRememberedEmail(); }
-      await loadProfile(data.user);
-      flushOfflineQueue();
-      appState = 'hub';
-      authNotice = null;
-      updateUserInfoBar();
-      render();
-    }
-  };
 }
 
 function renderHubScreen(){
@@ -9262,15 +9345,15 @@ function renderAdminDashboardContent(events, profiles){
   const userTableHtml = userRows.length ?
     '<table class="admin-table"><thead><tr><th>직원</th><th>지점</th><th>전체 클릭수</th></tr></thead><tbody>' +
     userRows.map(([uid, count]) =>
-      '<tr><td>'+(profileMap[uid] || '(알수없음)')+'</td><td>'+(branchMap[uid] || '-')+'</td><td>'+count+'</td></tr>'
+      '<tr><td>'+escapeHtml(profileMap[uid] || '(알수없음)')+'</td><td>'+escapeHtml(branchMap[uid] || '-')+'</td><td>'+count+'</td></tr>'
     ).join('') + '</tbody></table>'
     : '<div class="admin-empty">아직 기록이 없어요.</div>';
 
   // 지점별 활동
-  const branchCounts = {};
+  const branchCounts = Object.create(null);
   events.forEach(e => {
     if (!e.user_id) return;
-    const branch = branchMap[e.user_id];
+    const branch = e.branch_name || branchMap[e.user_id];
     if (!branch) return;
     branchCounts[branch] = (branchCounts[branch] || 0) + 1;
   });
@@ -9309,7 +9392,7 @@ function renderAdminDashboardContent(events, profiles){
       const tagText = e.outcome === 'as' ? 'A/S 필요' : '채널톡 문의하기';
       const when = new Date(e.created_at).toLocaleString('ko-KR', {month:'numeric', day:'numeric', hour:'2-digit', minute:'2-digit'});
       return '<div class="admin-recent-item">' +
-        '<div><b>'+(profileMap[e.user_id] || '(알수없음)')+'</b> · '+(e.device||'')+' · '+label+'<div style="color:var(--muted); font-size:11.5px;">'+when+'</div></div>' +
+        '<div><b>'+escapeHtml(profileMap[e.user_id] || '(알수없음)')+'</b> · '+(e.device||'')+' · '+label+'<div style="color:var(--muted); font-size:11.5px;">'+when+'</div></div>' +
         '<span class="admin-recent-tag '+tagClass+'">'+tagText+'</span>' +
       '</div>';
     }).join('')
@@ -9321,7 +9404,7 @@ function renderAdminDashboardContent(events, profiles){
       const label = (typeof SYMPTOM_LABEL !== 'undefined' && SYMPTOM_LABEL[e.symptom_id]) ? SYMPTOM_LABEL[e.symptom_id] : (e.symptom_id||'');
       const when = new Date(e.created_at).toLocaleString('ko-KR', {month:'numeric', day:'numeric', hour:'2-digit', minute:'2-digit'});
       return '<div class="admin-recent-item" style="display:block;">' +
-        '<div style="color:var(--muted); font-size:11.5px; margin-bottom:4px;">'+(profileMap[e.user_id] || '(알수없음)')+' · '+(e.device||'')+' · '+label+' · '+when+'</div>' +
+        '<div style="color:var(--muted); font-size:11.5px; margin-bottom:4px;">'+escapeHtml(profileMap[e.user_id] || '(알수없음)')+' · '+(e.device||'')+' · '+label+' · '+when+'</div>' +
         '<div>'+escapeHtml(e.feedback)+'</div>' +
       '</div>';
     }).join('')
@@ -9329,13 +9412,14 @@ function renderAdminDashboardContent(events, profiles){
 
   // 활동 없는 직원
   const inactiveHtml = inactiveProfiles.length ?
-    inactiveProfiles.map(p => '<span class="admin-inactive-chip">'+(p.display_name || p.email)+'</span>').join('')
+    inactiveProfiles.map(p => '<span class="admin-inactive-chip">'+escapeHtml(p.display_name || p.email)+'</span>').join('')
     : '<div class="admin-empty">모든 직원이 한 번 이상 사용했어요.</div>';
 
   area.innerHTML =
     '<div class="admin-screen">' +
       '<div style="display:flex; justify-content:space-between; align-items:flex-start; flex-wrap:wrap; gap:10px;">' +
         '<div><div class="hub-title">📊 관리자 대시보드</div><div class="hub-sub">전체 사용 현황을 확인할 수 있어요.</div></div>' +
+        '<button class="admin-export-btn" id="cmsApprovalsBtn">회원 가입 승인</button>' +
         '<button class="admin-export-btn" id="csvExportBtn">⬇ CSV로 내보내기</button>' +
       '</div>' +
       summaryHtml +
@@ -9355,6 +9439,7 @@ function renderAdminDashboardContent(events, profiles){
       '<div class="admin-section-title">💤 활동 없는 직원</div><div>' + inactiveHtml + '</div>' +
     '</div>';
 
+  document.getElementById('cmsApprovalsBtn').onclick=()=>{appState='cmsApprovals';render();};
   document.getElementById('csvExportBtn').onclick = ()=> exportEventsToCSV(events, profileMap);
 }
 
@@ -10268,6 +10353,7 @@ function updateResetButton(){
 
 let screenSwapTimer=null,screenEnterTimer=null;
 function render(){
+  if(currentUser?.cmsId && !currentUser.branchName && appState!=='login')appState='storeSelect';
   const area = document.getElementById('chatArea');
   const hasContent = area.childNodes.length > 0;
   const reduced=window.matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -10282,6 +10368,8 @@ function render(){
       pt.style.display = 'none';
     }
     if(appState === 'login') renderLoginScreen();
+    else if(appState === 'storeSelect') renderStoreSelection();
+    else if(appState === 'cmsApprovals') renderCmsApprovals();
     else if(appState === 'adminDashboard') renderAdminDashboardScreen();
     else if(appState === 'diagramEditor') renderDiagramEditorScreen();
     else if(appState === 'hub') renderHubScreen();
