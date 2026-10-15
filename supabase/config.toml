@@ -1,0 +1,4 @@
+[functions.cms-membership]
+verify_jwt = false
+entrypoint = "./functions/cms-membership/index.mjs"
+import_map = "./functions/deno.json"
