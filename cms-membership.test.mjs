@@ -70,3 +70,32 @@ test('database guard requires approved membership and a mapped event store',()=>
  assert.match(sql,/as restrictive for all/);assert.match(sql,/new\.branch_name=any\(m\.stores\)/);
  assert.match(sql,/revoke all on function public\.helper_cms_take_rate_limit/);
 });
+
+test('administrator IDs map to an isolated address namespace and existing email login is preserved',()=>{
+ const source=fs.readFileSync(new URL('./cms-membership-ui.js',import.meta.url),'utf8');
+ const context=vm.createContext({});vm.runInContext(source,context);
+ assert.equal(context.adminLoginEmail('helperadmin01'),'admin-helperadmin01@admins.kioskhelper.invalid');
+ assert.equal(context.adminLoginEmail(' existing@example.com '),'existing@example.com');
+ for(const input of ['ab','../admin','AABB','한글관리자','a b c'])assert.throws(()=>context.adminLoginEmail(input));
+});
+test('only an authenticated current administrator may create another administrator',async()=>{
+ const body={action:'create-admin',adminId:'helperadmin01',password:'long-test-password',role:'admin'};
+ for(const [f,token,status] of [[fixture({admin:true}),'anon',401],[fixture(),'staff-token',403]]){
+  assert.equal((await f.run(body,token)).status,status);
+  assert.ok(!f.calls.some(x=>x.path.endsWith('/admin/users')));
+ }
+ const f=fixture({admin:true,sourceError:true});const result=await f.run({...body,created_by:'attacker'},'admin-token');
+ assert.deepEqual(result,{status:200,body:{adminId:'helperadmin01',status:'created'}});
+ const create=f.calls.find(x=>x.path.endsWith('/admin/users'));
+ assert.equal(create.body.email,'admin-helperadmin01@admins.kioskhelper.invalid');
+ assert.deepEqual(create.body.app_metadata,{helper_admin_signup:'v1',admin_id:'helperadmin01',created_by:id});
+ assert.equal(create.body.user_metadata.role,undefined);assert.equal(result.body.session,undefined);
+});
+test('invalid administrator IDs, weak passwords and rate limiting prevent Auth account creation',async()=>{
+ for(const body of [{adminId:'Abcd',password:'long-test-password'},{adminId:'helperadmin01',password:'short'}]){
+  const f=fixture({admin:true});assert.equal((await f.run({action:'create-admin',...body},'admin-token')).status,400);
+  assert.ok(!f.calls.some(x=>x.path.endsWith('/admin/users')));
+ }
+ const f=fixture({admin:true,rate:false});assert.equal((await f.run({action:'create-admin',adminId:'helperadmin01',password:'long-test-password'},'admin-token')).status,429);
+ assert.ok(!f.calls.some(x=>x.path.endsWith('/admin/users')));
+});

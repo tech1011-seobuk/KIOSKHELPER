@@ -7657,6 +7657,9 @@ const CMS_MESSAGES={
  APPROVAL_REQUIRED:'관리자 승인 후 이용할 수 있어요.',
  LOGIN_REQUIRED:'다시 로그인해주세요.',
  ADMIN_REQUIRED:'관리자 계정만 이용할 수 있어요.',
+ ADMIN_ID_INVALID:'관리자 ID는 영문 소문자로 시작하는 4~40자의 영문·숫자·밑줄로 입력해주세요.',
+ ADMIN_PASSWORD_INVALID:'새 관리자 비밀번호는 12~128자로 입력해주세요.',
+ ADMIN_CREATE_FAILED:'계정을 만들지 못했어요. 이미 사용 중인 ID인지 확인해주세요.',
  TOO_MANY_REQUESTS:'요청이 많아요. 10분 뒤 다시 시도해주세요.',
  MEMBER_CHANGED:'다른 관리자가 처리한 신청이에요. 목록을 새로 확인해주세요.'
 };
@@ -7674,16 +7677,22 @@ function cmsChooseInitialStore(stores,saved){
  return stores.length===1?stores[0]:stores.includes(saved)?saved:null;
 }
 function cmsNextScreen(){return currentUser?.cmsId&&!currentUser.branchName?'storeSelect':'hub';}
+function adminLoginEmail(identity){
+ const value=identity.trim();
+ if(value.includes('@'))return value;
+ if(!/^[a-z][a-z0-9_]{3,39}$/.test(value))throw new Error(CMS_MESSAGES.ADMIN_ID_INVALID);
+ return 'admin-'+value+'@admins.kioskhelper.invalid';
+}
 function renderCmsAuthScreen(){
  const area=document.getElementById('chatArea'),signup=authMode==='signup',admin=authMode==='admin';
  const wrap=document.createElement('div');wrap.className='login-screen';
  wrap.innerHTML='<div class="hub-title">'+(signup?'회원가입':admin?'관리자 로그인':'로그인')+'</div>'+
- '<div class="hub-sub">'+(signup?'CMS ID를 확인한 뒤 관리자에게 가입 승인을 요청합니다.':admin?'기존 관리자 이메일과 비밀번호를 입력해주세요.':'CMS ID와 헬퍼 비밀번호를 입력해주세요.')+'</div>'+
+ '<div class="hub-sub">'+(signup?'CMS ID를 확인한 뒤 관리자에게 가입 승인을 요청합니다.':admin?'관리자 ID와 비밀번호를 입력해주세요.':'CMS ID와 헬퍼 비밀번호를 입력해주세요.')+'</div>'+
  (authNotice?'<div role="status" class="'+(authNotice.type==='error'?'login-error':'login-notice')+'">'+escapeHtml(authNotice.text)+'</div>':'')+
- '<form id="authForm"><div class="login-field"><label for="authIdentity">'+(admin?'관리자 이메일':'CMS ID')+'</label><input id="authIdentity" type="'+(admin?'email':'text')+'" autocomplete="username" maxlength="100" '+(admin?'value="'+escapeHtml(getRememberedEmail())+'"':'')+' required></div>'+
+ '<form id="authForm"><div class="login-field"><label for="authIdentity">'+(admin?'관리자 ID':'CMS ID')+'</label><input id="authIdentity" type="text" autocomplete="username" autocapitalize="none" spellcheck="false" maxlength="100" '+(admin?'value="'+escapeHtml(getRememberedEmail())+'"':'')+' required></div>'+
  '<div class="login-field"><label for="authPassword">'+(admin?'비밀번호':'헬퍼 비밀번호')+'</label><input id="authPassword" type="password" autocomplete="'+(signup?'new-password':'current-password')+'" minlength="'+(admin?6:8)+'" maxlength="128" required></div>'+
  (signup?'<div class="field-hint">CMS 비밀번호와 별도로, 헬퍼에서 사용할 비밀번호를 만들어주세요.</div><div class="login-field"><label for="authPasswordConfirm">비밀번호 확인</label><input id="authPasswordConfirm" type="password" autocomplete="new-password" minlength="8" maxlength="128" aria-describedby="passwordMatchStatus" required><span id="passwordMatchStatus" class="field-hint" role="status" aria-live="polite"></span></div>'+PRIVACY_CONSENT_HTML:'<label class="remember-email-row"><input id="authAutoLogin" type="checkbox" '+(helperAuthStorage.persistent?'checked':'')+'> 자동 로그인</label>')+
- (admin?'<label class="remember-email-row"><input id="authRememberEmail" type="checkbox" checked> 다음에도 이메일 기억하기</label>':'')+
+ (admin?'<label class="remember-email-row"><input id="authRememberEmail" type="checkbox" checked> 다음에도 관리자 ID 기억하기</label>':'')+
  '<button class="login-submit" id="authSubmitBtn" type="submit">'+(signup?'가입 승인 요청':'로그인')+'</button></form>'+
  '<div class="login-switch"><button id="authSwitchBtn">'+(signup||admin?'일반 로그인으로 돌아가기':'회원가입')+'</button></div>'+
  (!signup&&!admin?'<div class="login-switch"><button id="authAdminBtn">관리자 로그인</button></div><div class="field-hint">가입 승인·비밀번호 문의는 관리자에게 요청해주세요.</div>':'')+
@@ -7691,7 +7700,11 @@ function renderCmsAuthScreen(){
  area.replaceChildren(wrap);document.getElementById('breadcrumb').textContent='PHOTOISM 헬퍼';
  wrap.querySelector('#authSwitchBtn').onclick=()=>{authMode=signup||admin?'login':'signup';authNotice=null;render();};
  const adminBtn=wrap.querySelector('#authAdminBtn');if(adminBtn)adminBtn.onclick=()=>{authMode='admin';authNotice=null;render();};
- const forgot=wrap.querySelector('#authForgotBtn');if(forgot)forgot.onclick=()=>{authMode='forgot';authNotice=null;render();};
+ const forgot=wrap.querySelector('#authForgotBtn');if(forgot)forgot.onclick=()=>{
+  const identity=wrap.querySelector('#authIdentity').value.trim();
+  if(identity&&!identity.includes('@')){authNotice={type:'info',text:'ID로 만든 관리자 계정의 비밀번호는 운영 담당자에게 재설정을 요청해주세요.'};render();return;}
+  authMode='forgot';authNotice=null;render();
+ };
  if(signup){
   const first=wrap.querySelector('#authPassword'),confirm=wrap.querySelector('#authPasswordConfirm'),status=wrap.querySelector('#passwordMatchStatus');
   const check=()=>{const s=signupPasswordState(first.value,confirm.value);status.textContent=s.message;confirm.setCustomValidity(s.matches?'':s.message);confirm.setAttribute('aria-invalid',String(!s.empty&&!s.matches));};
@@ -7711,8 +7724,8 @@ function renderCmsAuthScreen(){
    helperAuthStorage.setPersistent(wrap.querySelector('#authAutoLogin').checked);
    let user;
    if(admin){
-    const {data,error}=await sb.auth.signInWithPassword({email:identity,password});
-    if(error)throw new Error('관리자 이메일 또는 비밀번호를 확인해주세요.');
+    const {data,error}=await sb.auth.signInWithPassword({email:adminLoginEmail(identity),password});
+    if(error)throw new Error('관리자 ID 또는 비밀번호를 확인해주세요.');
     user=data.user;
     const {data:profile,error:profileError}=await sb.from('profiles').select('role').eq('id',user.id).single();
     if(profileError||profile?.role!=='admin'){await sb.auth.signOut();throw new Error('관리자 계정만 이 로그인 방식을 사용할 수 있어요.');}
@@ -7764,6 +7777,7 @@ async function renderCmsApprovals(offset=0){
   if(currentUser?.id!==owner||appState!=='cmsApprovals')return;
   const wrap=document.createElement('div');wrap.className='admin-screen';
   wrap.innerHTML='<div class="hub-title">회원 가입 승인</div><div class="hub-sub">CMS ID와 연결 지점을 확인한 뒤 이용을 승인해주세요.</div>';
+  appendAdminAccountForm(wrap);
   if(!members.length){const p=document.createElement('p');p.textContent='가입 신청이 없어요.';wrap.appendChild(p);}
   for(const m of members){
    const card=document.createElement('section');card.style.cssText='border:1px solid var(--border);border-radius:14px;padding:20px;margin:16px 0;overflow-wrap:anywhere';
@@ -7778,6 +7792,19 @@ async function renderCmsApprovals(offset=0){
   for(const [label,next] of [['이전',Math.max(0,offset-50)],['다음',offset+50]]){const b=document.createElement('button');b.className='signup-store-option';b.textContent=label;b.disabled=label==='이전'?offset===0:members.length<50;b.onclick=()=>renderCmsApprovals(next);nav.appendChild(b);}
   wrap.appendChild(nav);area.replaceChildren(wrap);
  }catch(e){if(currentUser?.id===owner&&appState==='cmsApprovals'){area.textContent=e.message;}}
+}
+function appendAdminAccountForm(wrap){
+ const box=document.createElement('details');box.style.cssText='border:1px solid var(--border);border-radius:14px;padding:20px;margin:16px 0';
+ box.innerHTML='<summary>관리자 계정 추가</summary><p class="field-hint">새 계정은 가입 승인과 안내 편집 등 관리자 기능을 사용할 수 있습니다.</p><form id="adminCreateForm"><div class="login-field"><label for="newAdminId">새 관리자 ID</label><input id="newAdminId" type="text" value="helperadmin01" pattern="[a-z][a-z0-9_]{3,39}" minlength="4" maxlength="40" autocomplete="off" autocapitalize="none" spellcheck="false" required></div><div class="login-field"><label for="newAdminPassword">새 관리자 비밀번호</label><input id="newAdminPassword" type="password" minlength="12" maxlength="128" autocomplete="new-password" required></div><div class="login-field"><label for="newAdminPasswordConfirm">새 관리자 비밀번호 확인</label><input id="newAdminPasswordConfirm" type="password" minlength="12" maxlength="128" autocomplete="new-password" required></div><p class="field-hint">비밀번호는 12자 이상 입력해주세요.</p><button class="login-submit" type="submit">관리자 계정 만들기</button><p id="adminCreateStatus" role="status" aria-live="polite"></p></form>';
+ const form=box.querySelector('form'),password=box.querySelector('#newAdminPassword'),confirm=box.querySelector('#newAdminPasswordConfirm'),status=box.querySelector('#adminCreateStatus');
+ password.oninput=confirm.oninput=()=>confirm.setCustomValidity(password.value===confirm.value?'':'비밀번호가 일치하지 않습니다.');
+ form.onsubmit=async e=>{
+  e.preventDefault();const button=form.querySelector('button');button.disabled=true;status.textContent='계정을 만드는 중...';
+  try{const result=await cmsRequest('create-admin',{adminId:box.querySelector('#newAdminId').value.trim(),password:password.value});password.value='';confirm.value='';status.textContent='관리자 계정 '+result.adminId+'을 만들었어요. 관리자 로그인에서 사용할 수 있습니다.';}
+  catch(e){status.textContent=e.message;}
+  finally{button.disabled=false;}
+ };
+ wrap.appendChild(box);
 }
 
 /* CMS MEMBERSHIP END */
