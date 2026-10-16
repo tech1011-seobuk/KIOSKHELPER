@@ -52,13 +52,19 @@ export function createMembershipHandler({url,serviceKey,anonKey,mapping,sha256,f
    let body;try{body=JSON.parse(raw);}catch{fail('INVALID_REQUEST');}
    if(!body||typeof body!=='object')fail('INVALID_REQUEST');
    const action=body.action;
+   // Retired endpoint: stale clients must never provision an administrator.
+   if(action==='create-admin')fail('ADMIN_CREATION_DISABLED',410);
    if(action==='login-demo'){
     const id=typeof body.demoId==='string'?body.demoId.trim():'';
     if(!/^[a-z][a-z0-9_]{3,39}$/.test(id)||typeof body.password!=='string'||body.password.length<12||body.password.length>128)fail('LOGIN_NOT_AVAILABLE',401);
     await rate(req,'demo-login:'+id);
     const account=await demoAccount('login_id',id);
     if(!account?.active)fail('LOGIN_NOT_AVAILABLE',401);
-    let session;try{session=await request('/auth/v1/token?grant_type=password',{method:'POST',body:{email:'demo-'+id+'@demos.kioskhelper.invalid',password:body.password},token:anonKey,key:anonKey});}catch{fail('LOGIN_NOT_AVAILABLE',401);}
+    // A converted company account keeps its original credentials. Read its trusted
+    // Auth identity without exposing an email or accepting a client-chosen address.
+    let identity;try{identity=await request('/auth/v1/admin/users/'+encodeURIComponent(account.user_id));}catch{fail('LOGIN_NOT_AVAILABLE',401);}
+    if(identity?.id!==account.user_id||!['demo-'+id+'@demos.kioskhelper.invalid','admin-'+id+'@admins.kioskhelper.invalid'].includes(identity.email))fail('LOGIN_NOT_AVAILABLE',401);
+    let session;try{session=await request('/auth/v1/token?grant_type=password',{method:'POST',body:{email:identity.email,password:body.password},token:anonKey,key:anonKey});}catch{fail('LOGIN_NOT_AVAILABLE',401);}
     if(session?.user?.id!==account.user_id)fail('LOGIN_NOT_AVAILABLE',401);
     return respond({session:{access_token:session.access_token,refresh_token:session.refresh_token}});
    }
@@ -96,18 +102,17 @@ export function createMembershipHandler({url,serviceKey,anonKey,mapping,sha256,f
     return respond({admin:false,cmsId:m.cms_id,stores:latest.stores});
    }
    if(!caller.admin)fail('ADMIN_REQUIRED',403);
-   if(action==='create-admin'||action==='create-demo'){
-    const demo=action==='create-demo';
-    const identity=demo?body.demoId:body.adminId;
+   if(action==='create-demo'){
+    const identity=body.demoId;
     const id=typeof identity==='string'?identity.trim():'';
     if(!/^[a-z][a-z0-9_]{3,39}$/.test(id))fail('ADMIN_ID_INVALID');
     if(typeof body.password!=='string'||body.password.length<12||body.password.length>128)fail('ADMIN_PASSWORD_INVALID');
     await rate(req,'admin-create:'+caller.user.id);
     try{
-     const user=await request('/auth/v1/admin/users',{method:'POST',body:{email:demo?'demo-'+id+'@demos.kioskhelper.invalid':'admin-'+id+'@admins.kioskhelper.invalid',password:body.password,email_confirm:true,user_metadata:{display_name:id},app_metadata:demo?{helper_demo_signup:'v1',demo_id:id,created_by:caller.user.id}:{helper_admin_signup:'v1',admin_id:id,created_by:caller.user.id}}});
+     const user=await request('/auth/v1/admin/users',{method:'POST',body:{email:'demo-'+id+'@demos.kioskhelper.invalid',password:body.password,email_confirm:true,user_metadata:{display_name:id},app_metadata:{helper_demo_signup:'v1',demo_id:id,created_by:caller.user.id}}});
      if(!user?.id)fail('ADMIN_CREATE_FAILED',503);
     }catch(error){fail(error.duplicate?'ADMIN_ID_TAKEN':'ADMIN_CREATE_FAILED',error.duplicate?409:503);}
-    return respond(demo?{demoId:id,status:'created'}:{adminId:id,status:'created'});
+    return respond({demoId:id,status:'created'});
    }
    if(action==='list'){
     const offset=Number.isSafeInteger(body.offset)&&body.offset>=0?body.offset:0;
