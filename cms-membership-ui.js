@@ -129,7 +129,6 @@ async function renderCmsApprovals(offset=0){
   if(currentUser?.id!==owner||appState!=='cmsApprovals')return;
   const wrap=document.createElement('div');wrap.className='admin-screen';
   wrap.innerHTML='<div class="hub-title">회원 가입 승인</div><div class="hub-sub">CMS ID와 연결 지점을 확인한 뒤 이용을 승인해주세요.</div>';
-  appendAdminAccountForm(wrap);
   if(!members.length){const p=document.createElement('p');p.textContent='가입 신청이 없어요.';wrap.appendChild(p);}
   for(const m of members){
    const card=document.createElement('section');card.style.cssText='border:1px solid var(--border);border-radius:14px;padding:20px;margin:16px 0;overflow-wrap:anywhere';
@@ -145,9 +144,20 @@ async function renderCmsApprovals(offset=0){
   wrap.appendChild(nav);area.replaceChildren(wrap);
  }catch(e){if(currentUser?.id===owner&&appState==='cmsApprovals'){area.textContent=e.message;}}
 }
+function renderAdminAccountScreen(){
+ if(currentUser?.role!=='admin'){appState='login';render();return;}
+ const area=document.getElementById('chatArea'),wrap=document.createElement('div');
+ wrap.className='admin-screen';wrap.style.maxWidth='580px';
+ wrap.innerHTML='<div class="hub-title">관리자 계정 추가</div><div class="hub-sub">CMS와 연결하지 않는 별도 관리자 계정입니다.<br>만들면 승인 대기 없이 바로 로그인할 수 있어요.</div>';
+ document.getElementById('breadcrumb').textContent='관리자 · 관리자 계정 추가';
+ appendAdminAccountForm(wrap);
+ const back=document.createElement('button');back.className='admin-export-btn';back.textContent='관리자 화면으로';
+ back.onclick=()=>{appState='adminDashboard';render();};wrap.appendChild(back);
+ area.replaceChildren(wrap);
+}
 function appendAdminAccountForm(wrap){
- const box=document.createElement('details');box.style.cssText='border:1px solid var(--border);border-radius:14px;padding:20px;margin:16px 0';
- box.innerHTML='<summary>관리자 계정 추가</summary><p class="field-hint">새 계정은 가입 승인과 안내 편집 등 관리자 기능을 사용할 수 있습니다.</p><form id="adminCreateForm"><div class="login-field"><label for="newAdminId">새 관리자 ID</label><input id="newAdminId" type="text" value="helperadmin01" pattern="[a-z][a-z0-9_]{3,39}" minlength="4" maxlength="40" autocomplete="off" autocapitalize="none" spellcheck="false" required></div><div class="login-field"><label for="newAdminPassword">새 관리자 비밀번호</label><input id="newAdminPassword" type="password" minlength="12" maxlength="128" autocomplete="new-password" required></div><div class="login-field"><label for="newAdminPasswordConfirm">새 관리자 비밀번호 확인</label><input id="newAdminPasswordConfirm" type="password" minlength="12" maxlength="128" autocomplete="new-password" required></div><p class="field-hint">비밀번호는 12자 이상 입력해주세요.</p><button class="login-submit" type="submit">관리자 계정 만들기</button><p id="adminCreateStatus" role="status" aria-live="polite"></p></form>';
+ const box=document.createElement('section');box.style.cssText='border:1px solid var(--border);border-radius:14px;padding:20px;margin:20px 0';
+ box.innerHTML='<p class="field-hint">새 계정은 가입 승인과 안내 편집 등 관리자 기능을 사용할 수 있습니다.</p><form id="adminCreateForm"><div class="login-field"><label for="newAdminId">새 관리자 ID</label><input id="newAdminId" type="text" value="helperadmin01" pattern="[a-z][a-z0-9_]{3,39}" minlength="4" maxlength="40" autocomplete="off" autocapitalize="none" spellcheck="false" required></div><div class="login-field"><label for="newAdminPassword">새 관리자 비밀번호</label><input id="newAdminPassword" type="password" minlength="12" maxlength="128" autocomplete="new-password" required></div><div class="login-field"><label for="newAdminPasswordConfirm">새 관리자 비밀번호 확인</label><input id="newAdminPasswordConfirm" type="password" minlength="12" maxlength="128" autocomplete="new-password" required></div><p class="field-hint">비밀번호는 12자 이상 입력해주세요.</p><button class="login-submit" type="submit">관리자 계정 만들기</button><p id="adminCreateStatus" role="status" aria-live="polite"></p></form>';
  const form=box.querySelector('form'),password=box.querySelector('#newAdminPassword'),confirm=box.querySelector('#newAdminPasswordConfirm'),status=box.querySelector('#adminCreateStatus');
  password.oninput=confirm.oninput=()=>confirm.setCustomValidity(password.value===confirm.value?'':'비밀번호가 일치하지 않습니다.');
  form.onsubmit=async e=>{
