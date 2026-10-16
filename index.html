@@ -1981,6 +1981,7 @@ html[data-theme=light] .kiosk-line-overlay *{stroke:#28628b}
 .symptom-video-editor select,.symptom-video-editor input{box-sizing:border-box;display:block;width:100%;min-width:0;padding:12px;margin:8px 0;border:1px solid var(--border);border-radius:8px;background:var(--panel);color:var(--text)}
 .symptom-video-actions{display:flex;flex-wrap:wrap;gap:8px}.symptom-video-actions button,.symptom-video-entry,.symptom-video-dialog button{padding:10px 14px;border:1px solid var(--border);border-radius:10px;background:var(--panel2);color:var(--text);font:inherit;cursor:pointer}
 .symptom-video-entry{margin:0 0 18px;text-align:left;font-size:14px;max-width:100%}
+.diagnosis-video-choices{border:1px solid var(--border);border-radius:12px;padding:14px;min-width:0}.diagnosis-video-choices h3{font-size:15px;margin:0 0 8px}.diagnosis-video-choices p{font-size:13px;color:var(--muted);margin:0 0 12px}.diagnosis-video-buttons{display:flex;flex-wrap:wrap;gap:8px}.diagnosis-video-buttons button{min-height:44px;max-width:100%;padding:10px 12px;border:1px solid var(--border);border-radius:8px;background:var(--panel2);color:var(--text);font:inherit;font-size:13px;text-align:left;overflow-wrap:anywhere;cursor:pointer}.diagnosis-video-buttons button[aria-pressed="true"]{border-color:var(--accent);color:var(--accent)}.diagnosis-video-buttons button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}.diagnosis-video-choices .manual-video{margin:14px 0 0}.diagnosis-media-item{min-width:0}
 .manual-video{box-sizing:border-box;width:100%;max-width:760px;margin:0 auto 20px;padding:16px;border:1px solid var(--border);border-radius:16px;background:var(--panel);text-align:left;overflow:hidden}
 .manual-video h3{margin:0 0 12px;font-size:15px;line-height:1.5}
 .manual-video iframe{display:block;width:100%;aspect-ratio:16/9;border:0;border-radius:10px;background:#111}
@@ -9080,6 +9081,21 @@ function createManualVideo(url,label=SYMPTOM_VIDEO_NAME){
  const fallback=document.createElement('a');fallback.href=normalized;fallback.target='_blank';fallback.rel='noopener noreferrer';fallback.textContent='재생이 안 되면 유튜브에서 보기 ↗';
  section.append(title,frame,fallback);return section;
 }
+function createDiagnosisVideoChoices(items){
+ const section=document.createElement('section');section.className='diagnosis-video-choices';
+ const title=document.createElement('h3');title.textContent='필요한 영상만 보기';
+ const note=document.createElement('p');note.textContent='사용 중인 기종과 작업에 맞는 영상을 골라주세요.';
+ const choices=document.createElement('div');choices.className='diagnosis-video-buttons';choices.setAttribute('role','group');choices.setAttribute('aria-label','기종별 작업 영상');
+ const player=document.createElement('div');
+ const buttons=[];
+ for(const item of items){
+  let url;try{url=youtubeManualUrl(item.url);}catch{continue;}if(!url)continue;
+  const button=document.createElement('button');button.type='button';button.textContent=item.name;button.setAttribute('aria-pressed','false');
+  button.onclick=()=>{if(button.getAttribute('aria-pressed')==='true')return;for(const other of buttons)other.setAttribute('aria-pressed',String(other===button));player.replaceChildren(createManualVideo(url,item.name));};
+  buttons.push(button);choices.appendChild(button);
+ }
+ section.append(title,note,choices,player);return section;
+}
 function openSymptomVideo(url,label=SYMPTOM_VIDEO_NAME){
  const normalized=youtubeManualUrl(url);if(!normalized)return;
  const dialog=document.createElement('dialog');dialog.className='symptom-video-dialog';
@@ -9133,7 +9149,14 @@ async function hydrateDiagnosisMedia(){
     if(container.dataset.loaded||!container.isConnected)continue;
     container.dataset.loaded='true';
     let items;try{items=JSON.parse(decodeURIComponent(container.dataset.media));validateDiagnosisMedia(items);}catch{continue;}
+    items.sort((a,b)=>Number(b.kind==='image')-Number(a.kind==='image'));
+    const alternatives=items.filter(item=>{if(item.kind!=='link'||item.path)return false;try{return !!youtubeManualUrl(item.url);}catch{return false;}});
+    let videoChoicesAdded=false;
     for(const item of items){
+      if(alternatives.length>1&&alternatives.includes(item)){
+        if(!videoChoicesAdded&&container.isConnected&&currentUser?.id===owner){const wrapper=document.createElement('div');wrapper.className='diagnosis-media-item';wrapper.appendChild(createDiagnosisVideoChoices(alternatives));container.appendChild(wrapper);videoChoicesAdded=true;}
+        continue;
+      }
       const wrapper=document.createElement('div');wrapper.className='diagnosis-media-item';container.appendChild(wrapper);
       try{
         let src=item.url;
