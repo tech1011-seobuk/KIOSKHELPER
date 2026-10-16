@@ -78,6 +78,17 @@ export function createMembershipHandler({url,serviceKey,anonKey,mapping,sha256,f
     return respond({admin:false,cmsId:m.cms_id,stores:latest.stores});
    }
    if(!caller.admin)fail('ADMIN_REQUIRED',403);
+   if(action==='create-admin'){
+    const id=typeof body.adminId==='string'?body.adminId.trim():'';
+    if(!/^[a-z][a-z0-9_]{3,39}$/.test(id))fail('ADMIN_ID_INVALID');
+    if(typeof body.password!=='string'||body.password.length<12||body.password.length>128)fail('ADMIN_PASSWORD_INVALID');
+    await rate(req,'admin-create:'+caller.user.id);
+    try{
+     const user=await request('/auth/v1/admin/users',{method:'POST',body:{email:'admin-'+id+'@admins.kioskhelper.invalid',password:body.password,email_confirm:true,user_metadata:{display_name:id},app_metadata:{helper_admin_signup:'v1',admin_id:id,created_by:caller.user.id}}});
+     if(!user?.id)fail('ADMIN_CREATE_FAILED',503);
+    }catch{fail('ADMIN_CREATE_FAILED',400);}
+    return respond({adminId:id,status:'created'});
+   }
    if(action==='list'){
     const offset=Number.isSafeInteger(body.offset)&&body.offset>=0?body.offset:0;
     const rows=await rest('helper_cms_memberships?select=user_id,cms_id,status,stores,created_at,reviewed_at&order=created_at.desc&limit=50&offset='+offset);
