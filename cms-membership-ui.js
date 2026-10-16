@@ -9,8 +9,9 @@ const CMS_MESSAGES={
  APPROVAL_REQUIRED:'관리자 승인 후 이용할 수 있어요.',
  LOGIN_REQUIRED:'다시 로그인해주세요.',
  ADMIN_REQUIRED:'관리자 계정만 이용할 수 있어요.',
- ADMIN_ID_INVALID:'관리자 ID는 영문 소문자로 시작하는 4~40자의 영문·숫자·밑줄로 입력해주세요.',
- ADMIN_PASSWORD_INVALID:'새 관리자 비밀번호는 12~128자로 입력해주세요.',
+ ADMIN_ID_INVALID:'ID는 영문 소문자로 시작하는 4~40자의 영문·숫자·밑줄로 입력해주세요.',
+ ADMIN_PASSWORD_INVALID:'새 계정 비밀번호는 12~128자로 입력해주세요.',
+ ADMIN_CREATION_DISABLED:'관리자 계정 추가는 종료됐어요. 새로고침 후 계정 추가 메뉴를 이용해주세요.',
  ADMIN_CREATE_FAILED:'계정을 만들지 못했어요. 서버 처리 오류일 수 있으니 관리자에게 확인을 요청해주세요.',
  ADMIN_ID_TAKEN:'이미 사용 중인 ID예요. 다른 ID를 입력해주세요.',
  TOO_MANY_REQUESTS:'요청이 많아요. 10분 뒤 다시 시도해주세요.',
@@ -146,31 +147,25 @@ async function renderCmsApprovals(offset=0){
   wrap.appendChild(nav);area.replaceChildren(wrap);
  }catch(e){if(currentUser?.id===owner&&appState==='cmsApprovals'){area.textContent=e.message;}}
 }
-function renderAdminAccountScreen(demo=false){
+function renderAccountCreateScreen(){
  if(currentUser?.role!=='admin'){appState='login';render();return;}
  const area=document.getElementById('chatArea'),wrap=document.createElement('div');
  wrap.className='admin-screen';wrap.style.maxWidth='580px';
- wrap.innerHTML=demo?'<div class="hub-title">체험 계정 추가</div><div class="hub-sub">회사에 공유할 조치 안내 열람용 계정입니다.<br>CMS 확인 없이 만들며, 관리자·편집 기능은 제공하지 않습니다.</div>':'<div class="hub-title">관리자 계정 추가</div><div class="hub-sub">CMS와 연결하지 않는 별도 관리자 계정입니다.<br>만들면 승인 대기 없이 바로 로그인할 수 있어요.</div>';
- document.getElementById('breadcrumb').textContent='관리자 · '+(demo?'체험 계정 추가':'관리자 계정 추가');
- appendAdminAccountForm(wrap,demo);
+ wrap.innerHTML='<div class="hub-title">계정 추가</div><div class="hub-sub">일반 회원이 보는 조치 안내를 이용할 수 있는 계정입니다.<br>CMS 확인 없이 발급하고, 체험용 로그인에서 이용합니다.</div>';
+ document.getElementById('breadcrumb').textContent='관리자 · 계정 추가';
+ appendAccountCreateForm(wrap);
  const back=document.createElement('button');back.className='admin-export-btn';back.textContent='관리자 화면으로';
  back.onclick=()=>{appState='adminDashboard';render();};wrap.appendChild(back);
  area.replaceChildren(wrap);
 }
-function appendAdminAccountForm(wrap,demo=false){
+function appendAccountCreateForm(wrap){
  const box=document.createElement('section');box.style.cssText='border:1px solid var(--border);border-radius:14px;padding:20px;margin:20px 0';
- box.innerHTML='<p class="field-hint">새 계정은 가입 승인과 안내 편집 등 관리자 기능을 사용할 수 있습니다.</p><form id="adminCreateForm"><div class="login-field"><label for="newAdminId">새 관리자 ID</label><input id="newAdminId" type="text" value="helperadmin01" pattern="[a-z][a-z0-9_]{3,39}" minlength="4" maxlength="40" autocomplete="off" autocapitalize="none" spellcheck="false" required></div><div class="login-field"><label for="newAdminPassword">새 관리자 비밀번호</label><input id="newAdminPassword" type="password" minlength="12" maxlength="128" autocomplete="new-password" required></div><div class="login-field"><label for="newAdminPasswordConfirm">새 관리자 비밀번호 확인</label><input id="newAdminPasswordConfirm" type="password" minlength="12" maxlength="128" autocomplete="new-password" required></div><p class="field-hint">비밀번호는 12자 이상 입력해주세요.</p><button class="login-submit" type="submit">관리자 계정 만들기</button><p id="adminCreateStatus" role="status" aria-live="polite"></p></form>';
- if(demo){
-  box.querySelector('p').textContent='조치 안내·사진·영상만 열람할 수 있으며, 체험 이용은 실제 매장 조치 기록에 포함되지 않습니다.';
-  box.querySelector('#newAdminId').value='companydemo01';
-  for(const label of box.querySelectorAll('label'))label.textContent=label.textContent.replace('관리자','체험');
-  box.querySelector('button').textContent='체험 계정 만들기';
- }
- const form=box.querySelector('form'),password=box.querySelector('#newAdminPassword'),confirm=box.querySelector('#newAdminPasswordConfirm'),status=box.querySelector('#adminCreateStatus');
+ box.innerHTML='<p class="field-hint">조치 안내·사진·영상을 볼 수 있습니다. 관리자 기능과 다이어그램은 이용할 수 없습니다.</p><form id="accountCreateForm"><div class="login-field"><label for="newAccountId">새 계정 ID</label><input id="newAccountId" type="text" value="companydemo01" pattern="[a-z][a-z0-9_]{3,39}" minlength="4" maxlength="40" autocomplete="off" autocapitalize="none" spellcheck="false" required><span class="field-hint">영문 소문자로 시작하는 4~40자의 영문·숫자·밑줄</span></div><div class="login-field"><label for="newAccountPassword">비밀번호</label><input id="newAccountPassword" type="password" minlength="12" maxlength="128" autocomplete="new-password" required></div><div class="login-field"><label for="newAccountPasswordConfirm">비밀번호 확인</label><input id="newAccountPasswordConfirm" type="password" minlength="12" maxlength="128" autocomplete="new-password" required></div><p class="field-hint">비밀번호는 12자 이상 입력해주세요.</p><button class="login-submit" type="submit">계정 만들기</button><p id="accountCreateStatus" role="status" aria-live="polite"></p></form>';
+ const form=box.querySelector('form'),password=box.querySelector('#newAccountPassword'),confirm=box.querySelector('#newAccountPasswordConfirm'),status=box.querySelector('#accountCreateStatus');
  password.oninput=confirm.oninput=()=>confirm.setCustomValidity(password.value===confirm.value?'':'비밀번호가 일치하지 않습니다.');
  form.onsubmit=async e=>{
   e.preventDefault();const button=form.querySelector('button');button.disabled=true;status.textContent='계정을 만드는 중...';
-  try{const identity=box.querySelector('#newAdminId').value.trim();const result=await cmsRequest(demo?'create-demo':'create-admin',demo?{demoId:identity,password:password.value}:{adminId:identity,password:password.value});password.value='';confirm.value='';status.textContent=demo?'체험 계정 '+result.demoId+'을 만들었어요. 체험용 로그인에서 조치 안내를 볼 수 있습니다.':'관리자 계정 '+result.adminId+'을 만들었어요. 관리자 로그인에서 사용할 수 있습니다.';}
+  try{const identity=box.querySelector('#newAccountId').value.trim();const result=await cmsRequest('create-demo',{demoId:identity,password:password.value});password.value='';confirm.value='';status.textContent='계정 '+result.demoId+'을 만들었어요. 체험용 로그인에서 조치 안내를 볼 수 있습니다.';}
   catch(e){status.textContent=e.message;}
   finally{button.disabled=false;}
  };

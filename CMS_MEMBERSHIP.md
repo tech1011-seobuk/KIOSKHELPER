@@ -25,7 +25,7 @@
 
 ## 운영 시 확인
 
-관리자 로그인은 `관리자 ID`로 표시합니다. 기존 이메일은 그대로 입력할 수 있고, 새 ID 계정은 영문 소문자로 시작하는 4~40자의 영문·숫자·밑줄을 사용합니다. `관리자 대시보드 → 관리자 계정 추가`의 독립된 화면에서 기존 관리자가 새 계정을 만듭니다. CMS 회원가입과 별개이며 CMS ID 검사, 매장 연결, 승인 대기 없이 바로 관리자 로그인할 수 있습니다. 새 관리자 비밀번호는 12~128자이며 ID 계정은 이메일 수신이 불가능하므로 비밀번호 재설정은 운영 담당자가 처리합니다.
+관리자 로그인은 `관리자 ID`로 표시하며 기존 관리자 ID·이메일 로그인을 유지합니다. 새 계정 발급 메뉴는 `관리자 대시보드 → 계정 추가` 하나입니다. 여기서는 CMS 검사 없이 일반 회원의 조치 안내·사진·영상을 열람하는 계정만 발급합니다. 관리자 권한을 선택하거나 발급할 수 없으며 기존 `create-admin` 요청도 서버에서 거절합니다. 발급한 계정은 `체험용 로그인`에서 이용합니다. ID는 영문 소문자로 시작하는 4~40자의 영문·숫자·밑줄, 비밀번호는 12~128자를 사용합니다. ID 계정은 이메일 수신이 불가능하므로 비밀번호 재설정은 운영 담당자가 처리합니다.
 
 추가 migration `202610160001_admin_accounts.sql`은 서버가 쓰는 app_metadata와 생성 요청자의 현재 관리자 권한을 검사합니다. 일반 가입자가 쓰는 user_metadata는 관리자 권한 부여에 사용하지 않습니다. 프로필 생성과 관리자 권한 부여는 같은 Auth 생성 트랜잭션에서 처리합니다.
 
@@ -34,7 +34,7 @@
 기존 일반 이메일 계정은 기록을 보존하되 새 CMS 가입과 승인을 거쳐 이용합니다. 비밀번호 재설정은 기존 관리자 이메일 경로만 제공하며, 일반 회원의 헬퍼 비밀번호 문의는 관리자에게 연결합니다. 반려된 신청의 재신청 처리, 승인된 계정의 이용 중지 화면은 아직 제공하지 않습니다.
 # Company demo accounts and Auth ordering fix (2026-10-16)
 
-Existing administrators can use 관리자 → 체험 계정 추가 to provision a separate company demo ID. It does not query S3 or create a CMS membership. Colleagues use 체험용 로그인. The account can read troubleshooting guides and media; it has no administrator/editor access and does not submit real store usage events or feedback.
+Existing administrators use the single 관리자 → 계정 추가 screen to provision a separate company ID. It does not query S3 or create a CMS membership. Colleagues use 체험용 로그인. The account can read the same troubleshooting guides and media as ordinary members; it has no administrator/editor access and does not submit real store usage events or feedback. The former administrator-create endpoint now returns HTTP 410, including for previously opened administrator forms.
 
 `202610160002_deferred_signup_validation.sql` validates the final server-controlled Auth metadata with a deferred constraint trigger. Supabase Auth inserts a user before updating app metadata in the same transaction; validating the initial INSERT incorrectly rejected both CMS and standalone administrator creation. No untrusted user metadata grants access. Demo read-only restrictions are enforced in the database as well as the UI.
 

@@ -5,7 +5,7 @@ import vm from 'node:vm';
 import {createMembershipHandler} from './supabase/functions/_shared/cms-membership.mjs';
 import {sha256} from './supabase/functions/_shared/cms-mapping.mjs';
 const id='00000000-0000-4000-8000-000000000001';
-function fixture({status='approved',admin=false,missing=false,rate=true,sourceError=false,loginUser=id,demo=false,demoActive=true,authError=null}={}){
+function fixture({status='approved',admin=false,missing=false,rate=true,sourceError=false,loginUser=id,demo=false,demoActive=true,authError=null,demoEmail='demo-companydemo01@demos.kioskhelper.invalid',demoIdentity=id}={}){
  const calls=[];const row={user_id:id,cms_id:'0001',status,stores:['이전 지점']};
  const handler=createMembershipHandler({url:'https://example.test',anonKey:'anon',serviceKey:'service',sha256,
  mapping:{async lookup(cmsId){if(sourceError)throw Object.assign(new Error(),{code:'CMS_ID_NOT_FOUND'});return{cmsId,stores:['서울','부산'],mappingHash:'a'.repeat(64)};}},
@@ -18,6 +18,7 @@ function fixture({status='approved',admin=false,missing=false,rate=true,sourceEr
   else if(u.pathname.endsWith('/helper_cms_memberships'))response=options.method==='PATCH'?[{...row,...body}]:missing?[]:[row];
   else if(u.pathname.endsWith('/helper_demo_accounts'))response=demo?[{user_id:id,login_id:'companydemo01',active:demoActive}]:[];
   else if(u.pathname.endsWith('/token'))response={user:{id:loginUser},access_token:'test-access',refresh_token:'test-refresh'};
+  else if(u.pathname.endsWith('/admin/users/'+id))response={id:demoIdentity,email:demoEmail};
   else if(u.pathname.endsWith('/admin/users')&&authError)return new Response(JSON.stringify({code:authError}),{status:authError==='email_exists'?422:500});
   else response={id};
   return new Response(JSON.stringify(response),{status:200,headers:{'Content-Type':'application/json'}});
@@ -60,6 +61,17 @@ test('upstream database failures are not mislabeled as duplicate IDs',async()=>{
  const body={action:'create-demo',demoId:'companydemo01',password:'long-test-password'};
  assert.deepEqual(await fixture({admin:true,authError:'email_exists'}).run(body,'admin-token'),{status:409,body:{error:'ADMIN_ID_TAKEN'}});
  assert.deepEqual(await fixture({admin:true,authError:'unexpected_failure'}).run(body,'admin-token'),{status:503,body:{error:'ADMIN_CREATE_FAILED'}});
+});
+
+test('converted company accounts keep their credentials without accepting mismatched Auth identities',async()=>{
+ const body={action:'login-demo',demoId:'companydemo01',password:'long-test-password',email:'attacker@example.test'};
+ const f=fixture({demo:true,demoEmail:'admin-companydemo01@admins.kioskhelper.invalid'});
+ assert.equal((await f.run(body)).status,200);
+ assert.equal(f.calls.find(x=>x.path.endsWith('/token')).body.email,'admin-companydemo01@admins.kioskhelper.invalid');
+ for(const options of [{demoEmail:'someone@example.test'},{demoIdentity:'another-user'}]){
+  const rejected=fixture({demo:true,...options});assert.equal((await rejected.run(body)).status,401);
+  assert.ok(!rejected.calls.some(x=>x.path.endsWith('/token')));
+ }
 });
 test('unknown CMS ID, missing consent and rate limit prevent creation',async()=>{
  for(const opts of [{sourceError:true},{rate:false}]){const f=fixture({...opts,missing:true});assert.notEqual((await f.run({action:'signup',cmsId:'0001',password:'example-password',consent:true})).status,200);assert.ok(!f.calls.some(x=>x.path.endsWith('/admin/users')));}
@@ -107,24 +119,18 @@ test('administrator IDs map to an isolated address namespace and existing email 
  assert.equal(context.adminLoginEmail(' existing@example.com '),'existing@example.com');
  for(const input of ['ab','../admin','AABB','한글관리자','a b c'])assert.throws(()=>context.adminLoginEmail(input));
 });
-test('only an authenticated current administrator may create another administrator',async()=>{
+test('retired administrator creation cannot grant privileges, even from stale authenticated clients',async()=>{
  const body={action:'create-admin',adminId:'helperadmin01',password:'long-test-password',role:'admin'};
- for(const [f,token,status] of [[fixture({admin:true}),'anon',401],[fixture(),'staff-token',403]]){
-  assert.equal((await f.run(body,token)).status,status);
-  assert.ok(!f.calls.some(x=>x.path.endsWith('/admin/users')));
+ for(const [f,token] of [[fixture({admin:true}),'anon'],[fixture(),'staff-token'],[fixture({demo:true}),'demo-token'],[fixture({admin:true}),'admin-token']]){
+  assert.deepEqual(await f.run(body,token),{status:410,body:{error:'ADMIN_CREATION_DISABLED'}});
+  assert.equal(f.calls.length,0);
  }
- const f=fixture({admin:true,sourceError:true});const result=await f.run({...body,created_by:'attacker'},'admin-token');
- assert.deepEqual(result,{status:200,body:{adminId:'helperadmin01',status:'created'}});
- const create=f.calls.find(x=>x.path.endsWith('/admin/users'));
- assert.equal(create.body.email,'admin-helperadmin01@admins.kioskhelper.invalid');
- assert.deepEqual(create.body.app_metadata,{helper_admin_signup:'v1',admin_id:'helperadmin01',created_by:id});
- assert.equal(create.body.user_metadata.role,undefined);assert.equal(result.body.session,undefined);
 });
-test('invalid administrator IDs, weak passwords and rate limiting prevent Auth account creation',async()=>{
- for(const body of [{adminId:'Abcd',password:'long-test-password'},{adminId:'helperadmin01',password:'short'}]){
-  const f=fixture({admin:true});assert.equal((await f.run({action:'create-admin',...body},'admin-token')).status,400);
+test('invalid account IDs, weak passwords and rate limiting prevent Auth account creation',async()=>{
+ for(const body of [{demoId:'Abcd',password:'long-test-password'},{demoId:'companydemo01',password:'short'}]){
+  const f=fixture({admin:true});assert.equal((await f.run({action:'create-demo',...body},'admin-token')).status,400);
   assert.ok(!f.calls.some(x=>x.path.endsWith('/admin/users')));
  }
- const f=fixture({admin:true,rate:false});assert.equal((await f.run({action:'create-admin',adminId:'helperadmin01',password:'long-test-password'},'admin-token')).status,429);
+ const f=fixture({admin:true,rate:false});assert.equal((await f.run({action:'create-demo',demoId:'companydemo01',password:'long-test-password'},'admin-token')).status,429);
  assert.ok(!f.calls.some(x=>x.path.endsWith('/admin/users')));
 });
