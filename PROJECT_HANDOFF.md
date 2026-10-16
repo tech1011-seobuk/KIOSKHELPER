@@ -1,3 +1,12 @@
+## 2026-10-16 로그인 진입·3D 화면 정리
+
+- 로그인 진입은 관리자 로그인 하나로 통합. 기존 관리자, 전환된 체험 계정, 신규 체험 계정은 같은 화면을 사용하며 서버에서 확인된 기존 권한을 유지합니다. CMS 로그인·가입·승인 방식은 그대로입니다.
+- CMS 원본을 빌드 시 index.html에 함께 반영합니다.
+- 자동 검사 123개 통과.
+- PHOTOISM/SNAPISM의 기존 그림 보기 버튼을 제거했습니다. 3D 실패 시에는 부품 메뉴가 계속 표시됩니다.
+- 공통 3D 화면을 390px 브라우저에서 확인했습니다. 실물 휴대폰 시험은 별도입니다.
+- 이번 변경은 화면 코드만 해당하며 DB·사용자 권한·안내 내용은 변경하지 않습니다.
+
 # Production maintenance · 2026-10-16
 
 - Production: KIOSKHELPER / Supabase lsetixbyarexggxsihen. Staging: kioskhelper-staging / mjzhljlhjsbnnxyekmwy. Keep credentials, cache names, queues and data isolated.

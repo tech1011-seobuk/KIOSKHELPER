@@ -8225,23 +8225,37 @@ function adminLoginEmail(identity){
  if(!/^[a-z][a-z0-9_]{3,39}$/.test(value))throw new Error(CMS_MESSAGES.ADMIN_ID_INVALID);
  return 'admin-'+value+'@admins.kioskhelper.invalid';
 }
+async function signInManagedAccount(identity,password){
+ let {data,error}=await sb.auth.signInWithPassword({email:adminLoginEmail(identity),password});
+ if(error){
+  // New viewing accounts use a separate namespace resolved by the server.
+  if(identity.includes('@')||error.code!=='invalid_credentials')throw new Error('ID 또는 비밀번호를 확인해주세요.');
+  const result=await cmsRequest('login-demo',{demoId:identity,password});
+  ({data,error}=await sb.auth.setSession(result.session));
+  if(error)throw new Error('로그인을 완료하지 못했어요. 다시 시도해주세요.');
+ }
+ try{
+  const membership=await cmsRequest('session');
+  if(membership.admin!==true&&membership.demo!==true)throw new Error('발급받은 계정으로 로그인해주세요. CMS 회원은 일반 로그인을 이용해주세요.');
+  return data.user;
+ }catch(error){await sb.auth.signOut();throw error;}
+}
 function renderCmsAuthScreen(){
- const area=document.getElementById('chatArea'),signup=authMode==='signup',admin=authMode==='admin',demo=authMode==='demo';
+ const area=document.getElementById('chatArea'),signup=authMode==='signup',admin=authMode==='admin'||authMode==='demo';
  const wrap=document.createElement('div');wrap.className='login-screen';
- wrap.innerHTML='<div class="hub-title">'+(signup?'회원가입':admin?'관리자 로그인':demo?'체험용 로그인':'로그인')+'</div>'+
- '<div class="hub-sub">'+(signup?'CMS ID를 확인한 뒤 관리자에게 가입 승인을 요청합니다.':admin?'관리자 ID와 비밀번호를 입력해주세요.':demo?'전달받은 체험 ID로 조치 안내를 둘러보세요.':'CMS ID와 헬퍼 비밀번호를 입력해주세요.')+'</div>'+
+ wrap.innerHTML='<div class="hub-title">'+(signup?'회원가입':admin?'관리자 로그인':'로그인')+'</div>'+
+ '<div class="hub-sub">'+(signup?'CMS ID를 확인한 뒤 관리자에게 가입 승인을 요청합니다.':admin?'발급받은 ID와 비밀번호를 입력해주세요.':'CMS ID와 헬퍼 비밀번호를 입력해주세요.')+'</div>'+
  (authNotice?'<div role="status" class="'+(authNotice.type==='error'?'login-error':'login-notice')+'">'+escapeHtml(authNotice.text)+'</div>':'')+
- '<form id="authForm"><div class="login-field"><label for="authIdentity">'+(admin?'관리자 ID':demo?'체험 ID':'CMS ID')+'</label><input id="authIdentity" type="text" autocomplete="username" autocapitalize="none" spellcheck="false" maxlength="100" '+(admin?'value="'+escapeHtml(getRememberedEmail())+'"':'')+' required></div>'+
+ '<form id="authForm"><div class="login-field"><label for="authIdentity">'+(admin?'관리자 ID':'CMS ID')+'</label><input id="authIdentity" type="text" autocomplete="username" autocapitalize="none" spellcheck="false" maxlength="100" '+(admin?'value="'+escapeHtml(getRememberedEmail())+'"':'')+' required></div>'+
  '<div class="login-field"><label for="authPassword">'+(admin?'비밀번호':'헬퍼 비밀번호')+'</label><input id="authPassword" type="password" autocomplete="'+(signup?'new-password':'current-password')+'" minlength="'+(admin?6:8)+'" maxlength="128" required></div>'+
  (signup?'<div class="field-hint">CMS 비밀번호와 별도로, 헬퍼에서 사용할 비밀번호를 만들어주세요.</div><div class="login-field"><label for="authPasswordConfirm">비밀번호 확인</label><input id="authPasswordConfirm" type="password" autocomplete="new-password" minlength="8" maxlength="128" aria-describedby="passwordMatchStatus" required><span id="passwordMatchStatus" class="field-hint" role="status" aria-live="polite"></span></div>'+PRIVACY_CONSENT_HTML:'<label class="remember-email-row"><input id="authAutoLogin" type="checkbox" '+(helperAuthStorage.persistent?'checked':'')+'> 자동 로그인</label>')+
  (admin?'<label class="remember-email-row"><input id="authRememberEmail" type="checkbox" checked> 다음에도 관리자 ID 기억하기</label>':'')+
  '<button class="login-submit" id="authSubmitBtn" type="submit">'+(signup?'가입 승인 요청':'로그인')+'</button></form>'+
- '<div class="login-switch"><button id="authSwitchBtn">'+(signup||admin||demo?'일반 로그인으로 돌아가기':'회원가입')+'</button></div>'+
- (!signup&&!admin&&!demo?'<div class="login-switch"><button id="authDemoBtn">체험용 로그인</button><button id="authAdminBtn">관리자 로그인</button></div><div class="field-hint">가입 승인·비밀번호 문의는 관리자에게 요청해주세요.</div>':'')+
+ '<div class="login-switch"><button id="authSwitchBtn">'+(signup||admin?'일반 로그인으로 돌아가기':'회원가입')+'</button></div>'+
+ (!signup&&!admin?'<div class="login-switch"><button id="authAdminBtn">관리자 로그인</button></div><div class="field-hint">가입 승인·비밀번호 문의는 관리자에게 요청해주세요.</div>':'')+
  (admin?'<div class="login-switch"><button id="authForgotBtn">관리자 비밀번호 찾기</button></div>':'');
  area.replaceChildren(wrap);document.getElementById('breadcrumb').textContent='PHOTOISM 헬퍼';
- wrap.querySelector('#authSwitchBtn').onclick=()=>{authMode=signup||admin||demo?'login':'signup';authNotice=null;render();};
- const demoBtn=wrap.querySelector('#authDemoBtn');if(demoBtn)demoBtn.onclick=()=>{authMode='demo';authNotice=null;render();};
+ wrap.querySelector('#authSwitchBtn').onclick=()=>{authMode=signup||admin?'login':'signup';authNotice=null;render();};
  const adminBtn=wrap.querySelector('#authAdminBtn');if(adminBtn)adminBtn.onclick=()=>{authMode='admin';authNotice=null;render();};
  const forgot=wrap.querySelector('#authForgotBtn');if(forgot)forgot.onclick=()=>{
   const identity=wrap.querySelector('#authIdentity').value.trim();
@@ -8267,14 +8281,10 @@ function renderCmsAuthScreen(){
    helperAuthStorage.setPersistent(wrap.querySelector('#authAutoLogin').checked);
    let user;
    if(admin){
-    const {data,error}=await sb.auth.signInWithPassword({email:adminLoginEmail(identity),password});
-    if(error)throw new Error('관리자 ID 또는 비밀번호를 확인해주세요.');
-    user=data.user;
-    const {data:profile,error:profileError}=await sb.from('profiles').select('role').eq('id',user.id).single();
-    if(profileError||profile?.role!=='admin'){await sb.auth.signOut();throw new Error('관리자 계정만 이 로그인 방식을 사용할 수 있어요.');}
+    user=await signInManagedAccount(identity,password);
     if(wrap.querySelector('#authRememberEmail').checked)setRememberedEmail(identity);else clearRememberedEmail();
    }else{
-    const result=await cmsRequest(demo?'login-demo':'login',demo?{demoId:identity,password}:{cmsId:identity,password});
+    const result=await cmsRequest('login',{cmsId:identity,password});
     const {data,error}=await sb.auth.setSession(result.session);if(error)throw new Error('로그인을 완료하지 못했어요. 다시 시도해주세요.');user=data.user;
    }
    try{sessionStorage.removeItem(cmsStoreKey(user.id));}catch{}
@@ -8339,7 +8349,7 @@ function renderAccountCreateScreen(){
  if(currentUser?.role!=='admin'){appState='login';render();return;}
  const area=document.getElementById('chatArea'),wrap=document.createElement('div');
  wrap.className='admin-screen';wrap.style.maxWidth='580px';
- wrap.innerHTML='<div class="hub-title">계정 추가</div><div class="hub-sub">일반 회원이 보는 조치 안내를 이용할 수 있는 계정입니다.<br>CMS 확인 없이 발급하고, 체험용 로그인에서 이용합니다.</div>';
+ wrap.innerHTML='<div class="hub-title">계정 추가</div><div class="hub-sub">일반 회원이 보는 조치 안내를 이용할 수 있는 계정입니다.<br>CMS 확인 없이 발급하고, 관리자 로그인에서 이용합니다.</div>';
  document.getElementById('breadcrumb').textContent='관리자 · 계정 추가';
  appendAccountCreateForm(wrap);
  const back=document.createElement('button');back.className='admin-export-btn';back.textContent='관리자 화면으로';
@@ -8353,12 +8363,13 @@ function appendAccountCreateForm(wrap){
  password.oninput=confirm.oninput=()=>confirm.setCustomValidity(password.value===confirm.value?'':'비밀번호가 일치하지 않습니다.');
  form.onsubmit=async e=>{
   e.preventDefault();const button=form.querySelector('button');button.disabled=true;status.textContent='계정을 만드는 중...';
-  try{const identity=box.querySelector('#newAccountId').value.trim();const result=await cmsRequest('create-demo',{demoId:identity,password:password.value});password.value='';confirm.value='';status.textContent='계정 '+result.demoId+'을 만들었어요. 체험용 로그인에서 조치 안내를 볼 수 있습니다.';}
+  try{const identity=box.querySelector('#newAccountId').value.trim();const result=await cmsRequest('create-demo',{demoId:identity,password:password.value});password.value='';confirm.value='';status.textContent='계정 '+result.demoId+'을 만들었어요. 관리자 로그인에서 조치 안내를 볼 수 있습니다.';}
   catch(e){status.textContent=e.message;}
   finally{button.disabled=false;}
  };
  wrap.appendChild(box);
 }
+
 /* CMS MEMBERSHIP END */
 
 const PRIVACY_CONSENT_HTML =
@@ -10942,7 +10953,7 @@ let snapismViewMode='3d';
 function renderPhotoism3DPicker(area,brand='photoism'){
  const isSnap=brand==='snapism';
  function choose(name){if(!isSnap){selectDeviceFromPicker(name==='서비스코인 / 설정'?'서비스코인':name);return;}const device=name==='서비스코인 / 설정'?'서비스코인':name;if(device==='CMS'){selectedDevice=device;symptomSource='snapism';appState='symptoms';render();}else openSnapManuals(device);logEvent('device_click',{brand:'snapism',device});}
- area.innerHTML='<section class="photoism3d"><div class="model-heading"><div><h2>PHOTOISM</h2><p>내부 보기를 누르면 앞문이 열리며 내부가 확대됩니다. 확인할 부품을 선택해주세요.</p></div><button id="modelLegacy">기존 그림 보기</button></div><div class="model-toolbar" aria-label="키오스크 방향"><button data-view="front" aria-pressed="true"><strong>앞면</strong><small>카메라 · 모니터 · 결제 장치</small></button><button data-view="inside" aria-pressed="false"><strong>내부 보기</strong><small>프린터 · PC · 서비스코인/설정</small></button></div><h3 id="modelPartHeading" class="model-view-status" role="status" aria-live="polite">앞면 부품</h3><div class="model-stage model-callout-stage"><button class="model-door-hint" hidden><strong>앞문 열기 · 내부 보기</strong><span>프린터 · PC · 서비스코인/설정</span></button><svg class="model-door-leader" hidden aria-hidden="true"><defs><marker id="doorArrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z"/></marker></defs><path class="door-arrow-line" marker-end="url(#doorArrow)"></path><circle r="9"></circle></svg><div id="photoismModelHost" class="model-host"></div><svg class="model-leaders" aria-hidden="true"></svg><div class="model-parts" aria-label="진단할 부품 선택"></div><div class="model-cms-satellite" aria-hidden="true"><svg viewBox="25 12 250 80" aria-hidden="true"><g>        <rect x="90" y="63" width="24" height="6" fill="#3a3d47"/>        <rect x="186" y="63" width="24" height="6" fill="#3a3d47"/>        <rect x="34" y="52" width="56" height="30" rx="3" fill="#1c2a3a" stroke="#3a5a78" stroke-width="1.2"/>        <rect x="210" y="52" width="56" height="30" rx="3" fill="#1c2a3a" stroke="#3a5a78" stroke-width="1.2"/>        <g stroke="#3a5a78" stroke-width="1">          <line x1="48" y1="52" x2="48" y2="82"/><line x1="62" y1="52" x2="62" y2="82"/><line x1="76" y1="52" x2="76" y2="82"/>          <line x1="224" y1="52" x2="224" y2="82"/><line x1="238" y1="52" x2="238" y2="82"/><line x1="252" y1="52" x2="252" y2="82"/>        </g>        <rect x="120" y="50" width="60" height="36" rx="9" fill="#2c2f38" stroke="#454852" stroke-width="1.5"/>        <circle class="sat-blink" cx="150" cy="68" r="4"/>        <path d="M132,50 Q150,20 168,50 Z" fill="#454852" stroke="#5a5d68" stroke-width="1.2"/>        <line x1="150" y1="34" x2="150" y2="20" stroke="#5a5d68" stroke-width="2"/>        <circle cx="150" cy="18" r="3" fill="#5a5d68"/>        </g></svg></div><svg class="model-cms-leader" aria-hidden="true"><path></path><circle r="3"></circle></svg><button class="model-callout model-cms-label">CMS</button><svg class="model-cms-waves" aria-hidden="true"><path></path><path></path><path></path></svg></div></section>';
+ area.innerHTML='<section class="photoism3d"><div class="model-heading"><div><h2>PHOTOISM</h2><p>내부 보기를 누르면 앞문이 열리며 내부가 확대됩니다. 확인할 부품을 선택해주세요.</p></div></div><div class="model-toolbar" aria-label="키오스크 방향"><button data-view="front" aria-pressed="true"><strong>앞면</strong><small>카메라 · 모니터 · 결제 장치</small></button><button data-view="inside" aria-pressed="false"><strong>내부 보기</strong><small>프린터 · PC · 서비스코인/설정</small></button></div><h3 id="modelPartHeading" class="model-view-status" role="status" aria-live="polite">앞면 부품</h3><div class="model-stage model-callout-stage"><button class="model-door-hint" hidden><strong>앞문 열기 · 내부 보기</strong><span>프린터 · PC · 서비스코인/설정</span></button><svg class="model-door-leader" hidden aria-hidden="true"><defs><marker id="doorArrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z"/></marker></defs><path class="door-arrow-line" marker-end="url(#doorArrow)"></path><circle r="9"></circle></svg><div id="photoismModelHost" class="model-host"></div><svg class="model-leaders" aria-hidden="true"></svg><div class="model-parts" aria-label="진단할 부품 선택"></div><div class="model-cms-satellite" aria-hidden="true"><svg viewBox="25 12 250 80" aria-hidden="true"><g>        <rect x="90" y="63" width="24" height="6" fill="#3a3d47"/>        <rect x="186" y="63" width="24" height="6" fill="#3a3d47"/>        <rect x="34" y="52" width="56" height="30" rx="3" fill="#1c2a3a" stroke="#3a5a78" stroke-width="1.2"/>        <rect x="210" y="52" width="56" height="30" rx="3" fill="#1c2a3a" stroke="#3a5a78" stroke-width="1.2"/>        <g stroke="#3a5a78" stroke-width="1">          <line x1="48" y1="52" x2="48" y2="82"/><line x1="62" y1="52" x2="62" y2="82"/><line x1="76" y1="52" x2="76" y2="82"/>          <line x1="224" y1="52" x2="224" y2="82"/><line x1="238" y1="52" x2="238" y2="82"/><line x1="252" y1="52" x2="252" y2="82"/>        </g>        <rect x="120" y="50" width="60" height="36" rx="9" fill="#2c2f38" stroke="#454852" stroke-width="1.5"/>        <circle class="sat-blink" cx="150" cy="68" r="4"/>        <path d="M132,50 Q150,20 168,50 Z" fill="#454852" stroke="#5a5d68" stroke-width="1.2"/>        <line x1="150" y1="34" x2="150" y2="20" stroke="#5a5d68" stroke-width="2"/>        <circle cx="150" cy="18" r="3" fill="#5a5d68"/>        </g></svg></div><svg class="model-cms-leader" aria-hidden="true"><path></path><circle r="3"></circle></svg><button class="model-callout model-cms-label">CMS</button><svg class="model-cms-waves" aria-hidden="true"><path></path><path></path><path></path></svg></div></section>';
  if(isSnap){area.querySelector('h2').textContent='SNAPISM';area.querySelector('[data-view=front] small').textContent='모니터 · 카드단말기';area.querySelector('[data-view=inside] small').textContent='CX7600 · DS620 · PC · 서비스코인/설정';area.querySelector('.model-door-hint span').textContent='프린터 · PC · 서비스코인/설정';}
  document.getElementById('breadcrumb').textContent=(isSnap?'스내피즘':'포토이즘')+' · 부품 선택';
  const host=area.querySelector('#photoismModelHost'),parts=area.querySelector('.model-parts'),heading=area.querySelector('#modelPartHeading'),stage=area.querySelector('.model-stage'),lines=area.querySelector('.model-leaders');let viewer=null,version=0,failed=false,active=[];
@@ -10962,10 +10973,9 @@ function renderPhotoism3DPicker(area,brand='photoism'){
  function layout(){layoutSignal();if(failed||!viewer||!active.length)return;const w=host.clientWidth,h=host.clientHeight;lines.setAttribute('viewBox',`0 0 ${w} ${h}`);for(const side of [0,1]){const list=active.filter(a=>a.side===side);const ys=list.map(a=>viewer.project(a.name).y);for(let i=0;i<ys.length;i++)ys[i]=Math.max(28,ys[i],i?ys[i-1]+57:0);if(ys.at(-1)>h-28){ys[ys.length-1]=h-28;for(let i=ys.length-2;i>=0;i--)ys[i]=Math.min(ys[i],ys[i+1]-57);}list.forEach((a,i)=>{const p=viewer.project(a.name),bw=a.button.offsetWidth,y=ys[i],x=side?w-bw-4-calloutInset():4+calloutInset();a.button.style.left=x+'px';a.button.style.top=(y-22)+'px';const start=side?x:x+bw,elbow=side?Math.max(p.x+12,start-18):Math.min(p.x-12,start+18);a.path.setAttribute('d',`M ${start} ${y} L ${elbow} ${y} L ${p.x} ${p.y}`);a.dot.setAttribute('cx',p.x);a.dot.setAttribute('cy',p.y);});}layoutDoor();}
  function reveal(mode,token){if(!host.isConnected||token!==version)return;heading.textContent=mode==='front'?'앞面 부품 선택'.replace('面','면'):'내부 부품 선택';parts.replaceChildren();lines.replaceChildren();active=[];let n=0;groups[mode].forEach((names,side)=>names.forEach(name=>{const i=n++,button=document.createElement('button');button.className='model-callout';button.textContent=name;button.style.setProperty('--callout-delay',(i*65+180)+'ms');if(name==='서비스코인 / 설정'){button.style.whiteSpace='normal';button.style.wordBreak='keep-all';}button.onclick=()=>choose(name);parts.appendChild(button);const g=document.createElementNS('http://www.w3.org/2000/svg','g'),path=document.createElementNS(g.namespaceURI,'path'),dot=document.createElementNS(g.namespaceURI,'circle');g.style.setProperty('--callout-delay',(i*65)+'ms');path.setAttribute('pathLength','1');dot.setAttribute('r','3');g.append(path,dot);lines.appendChild(g);active.push({name,side,button,path,dot});}));parts.removeAttribute('aria-busy');area.querySelector('.model-door-hint').hidden=mode!=='front'||failed;layout();}
  function change(mode){area.querySelector('.model-door-hint').hidden=true;area.querySelector('.model-door-leader').setAttribute('hidden','');const token=++version;active=[];parts.replaceChildren();lines.replaceChildren();parts.setAttribute('aria-busy','true');heading.textContent=mode==='front'?'전체 모습으로 돌아가는 중…':'앞문을 열고 내부를 확대하는 중…';area.querySelectorAll('[data-view]').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.view===mode)));if(failed)reveal(mode,token);else viewer.view(mode,()=>reveal(mode,token));}
- area.querySelector('#modelLegacy').onclick=()=>{version++;if(isSnap)snapismViewMode='2d';else photoismViewMode='2d';viewer?.dispose();if(isSnap)renderSnapismPickerScreen();else renderPickerScreen();};
  area.querySelector('.model-door-hint').onclick=()=>change('inside');
  area.querySelector('.model-cms-label').onclick=()=>choose('CMS');
- function fallback(){failed=true;viewer?.dispose();stage.classList.add('model-callout-fallback');host.innerHTML='<div class="model-unavailable">3D 표시를 사용할 수 없습니다.<br>부품 메뉴 또는 기존 그림 보기를 이용해주세요.</div>';}
+ function fallback(){failed=true;viewer?.dispose();stage.classList.add('model-callout-fallback');host.innerHTML='<div class="model-unavailable">3D 표시를 사용할 수 없습니다.<br>아래 부품 메뉴를 이용해주세요.</div>';}
  host.addEventListener('modelrender',layout);
  host.addEventListener('modelerror',()=>{if(!host.isConnected)return;fallback();reveal(area.querySelector('[data-view][aria-pressed="true"]').dataset.view,version);},{once:true});
  try{viewer=PhotoismModel.mount(host,brand);}catch(error){fallback();}

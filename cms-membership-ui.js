@@ -37,23 +37,37 @@ function adminLoginEmail(identity){
  if(!/^[a-z][a-z0-9_]{3,39}$/.test(value))throw new Error(CMS_MESSAGES.ADMIN_ID_INVALID);
  return 'admin-'+value+'@admins.kioskhelper.invalid';
 }
+async function signInManagedAccount(identity,password){
+ let {data,error}=await sb.auth.signInWithPassword({email:adminLoginEmail(identity),password});
+ if(error){
+  // New viewing accounts use a separate namespace resolved by the server.
+  if(identity.includes('@')||error.code!=='invalid_credentials')throw new Error('ID 또는 비밀번호를 확인해주세요.');
+  const result=await cmsRequest('login-demo',{demoId:identity,password});
+  ({data,error}=await sb.auth.setSession(result.session));
+  if(error)throw new Error('로그인을 완료하지 못했어요. 다시 시도해주세요.');
+ }
+ try{
+  const membership=await cmsRequest('session');
+  if(membership.admin!==true&&membership.demo!==true)throw new Error('발급받은 계정으로 로그인해주세요. CMS 회원은 일반 로그인을 이용해주세요.');
+  return data.user;
+ }catch(error){await sb.auth.signOut();throw error;}
+}
 function renderCmsAuthScreen(){
- const area=document.getElementById('chatArea'),signup=authMode==='signup',admin=authMode==='admin',demo=authMode==='demo';
+ const area=document.getElementById('chatArea'),signup=authMode==='signup',admin=authMode==='admin'||authMode==='demo';
  const wrap=document.createElement('div');wrap.className='login-screen';
- wrap.innerHTML='<div class="hub-title">'+(signup?'회원가입':admin?'관리자 로그인':demo?'체험용 로그인':'로그인')+'</div>'+
- '<div class="hub-sub">'+(signup?'CMS ID를 확인한 뒤 관리자에게 가입 승인을 요청합니다.':admin?'관리자 ID와 비밀번호를 입력해주세요.':demo?'전달받은 체험 ID로 조치 안내를 둘러보세요.':'CMS ID와 헬퍼 비밀번호를 입력해주세요.')+'</div>'+
+ wrap.innerHTML='<div class="hub-title">'+(signup?'회원가입':admin?'관리자 로그인':'로그인')+'</div>'+
+ '<div class="hub-sub">'+(signup?'CMS ID를 확인한 뒤 관리자에게 가입 승인을 요청합니다.':admin?'발급받은 ID와 비밀번호를 입력해주세요.':'CMS ID와 헬퍼 비밀번호를 입력해주세요.')+'</div>'+
  (authNotice?'<div role="status" class="'+(authNotice.type==='error'?'login-error':'login-notice')+'">'+escapeHtml(authNotice.text)+'</div>':'')+
- '<form id="authForm"><div class="login-field"><label for="authIdentity">'+(admin?'관리자 ID':demo?'체험 ID':'CMS ID')+'</label><input id="authIdentity" type="text" autocomplete="username" autocapitalize="none" spellcheck="false" maxlength="100" '+(admin?'value="'+escapeHtml(getRememberedEmail())+'"':'')+' required></div>'+
+ '<form id="authForm"><div class="login-field"><label for="authIdentity">'+(admin?'관리자 ID':'CMS ID')+'</label><input id="authIdentity" type="text" autocomplete="username" autocapitalize="none" spellcheck="false" maxlength="100" '+(admin?'value="'+escapeHtml(getRememberedEmail())+'"':'')+' required></div>'+
  '<div class="login-field"><label for="authPassword">'+(admin?'비밀번호':'헬퍼 비밀번호')+'</label><input id="authPassword" type="password" autocomplete="'+(signup?'new-password':'current-password')+'" minlength="'+(admin?6:8)+'" maxlength="128" required></div>'+
  (signup?'<div class="field-hint">CMS 비밀번호와 별도로, 헬퍼에서 사용할 비밀번호를 만들어주세요.</div><div class="login-field"><label for="authPasswordConfirm">비밀번호 확인</label><input id="authPasswordConfirm" type="password" autocomplete="new-password" minlength="8" maxlength="128" aria-describedby="passwordMatchStatus" required><span id="passwordMatchStatus" class="field-hint" role="status" aria-live="polite"></span></div>'+PRIVACY_CONSENT_HTML:'<label class="remember-email-row"><input id="authAutoLogin" type="checkbox" '+(helperAuthStorage.persistent?'checked':'')+'> 자동 로그인</label>')+
  (admin?'<label class="remember-email-row"><input id="authRememberEmail" type="checkbox" checked> 다음에도 관리자 ID 기억하기</label>':'')+
  '<button class="login-submit" id="authSubmitBtn" type="submit">'+(signup?'가입 승인 요청':'로그인')+'</button></form>'+
- '<div class="login-switch"><button id="authSwitchBtn">'+(signup||admin||demo?'일반 로그인으로 돌아가기':'회원가입')+'</button></div>'+
- (!signup&&!admin&&!demo?'<div class="login-switch"><button id="authDemoBtn">체험용 로그인</button><button id="authAdminBtn">관리자 로그인</button></div><div class="field-hint">가입 승인·비밀번호 문의는 관리자에게 요청해주세요.</div>':'')+
+ '<div class="login-switch"><button id="authSwitchBtn">'+(signup||admin?'일반 로그인으로 돌아가기':'회원가입')+'</button></div>'+
+ (!signup&&!admin?'<div class="login-switch"><button id="authAdminBtn">관리자 로그인</button></div><div class="field-hint">가입 승인·비밀번호 문의는 관리자에게 요청해주세요.</div>':'')+
  (admin?'<div class="login-switch"><button id="authForgotBtn">관리자 비밀번호 찾기</button></div>':'');
  area.replaceChildren(wrap);document.getElementById('breadcrumb').textContent='PHOTOISM 헬퍼';
- wrap.querySelector('#authSwitchBtn').onclick=()=>{authMode=signup||admin||demo?'login':'signup';authNotice=null;render();};
- const demoBtn=wrap.querySelector('#authDemoBtn');if(demoBtn)demoBtn.onclick=()=>{authMode='demo';authNotice=null;render();};
+ wrap.querySelector('#authSwitchBtn').onclick=()=>{authMode=signup||admin?'login':'signup';authNotice=null;render();};
  const adminBtn=wrap.querySelector('#authAdminBtn');if(adminBtn)adminBtn.onclick=()=>{authMode='admin';authNotice=null;render();};
  const forgot=wrap.querySelector('#authForgotBtn');if(forgot)forgot.onclick=()=>{
   const identity=wrap.querySelector('#authIdentity').value.trim();
@@ -79,14 +93,10 @@ function renderCmsAuthScreen(){
    helperAuthStorage.setPersistent(wrap.querySelector('#authAutoLogin').checked);
    let user;
    if(admin){
-    const {data,error}=await sb.auth.signInWithPassword({email:adminLoginEmail(identity),password});
-    if(error)throw new Error('관리자 ID 또는 비밀번호를 확인해주세요.');
-    user=data.user;
-    const {data:profile,error:profileError}=await sb.from('profiles').select('role').eq('id',user.id).single();
-    if(profileError||profile?.role!=='admin'){await sb.auth.signOut();throw new Error('관리자 계정만 이 로그인 방식을 사용할 수 있어요.');}
+    user=await signInManagedAccount(identity,password);
     if(wrap.querySelector('#authRememberEmail').checked)setRememberedEmail(identity);else clearRememberedEmail();
    }else{
-    const result=await cmsRequest(demo?'login-demo':'login',demo?{demoId:identity,password}:{cmsId:identity,password});
+    const result=await cmsRequest('login',{cmsId:identity,password});
     const {data,error}=await sb.auth.setSession(result.session);if(error)throw new Error('로그인을 완료하지 못했어요. 다시 시도해주세요.');user=data.user;
    }
    try{sessionStorage.removeItem(cmsStoreKey(user.id));}catch{}
@@ -151,7 +161,7 @@ function renderAccountCreateScreen(){
  if(currentUser?.role!=='admin'){appState='login';render();return;}
  const area=document.getElementById('chatArea'),wrap=document.createElement('div');
  wrap.className='admin-screen';wrap.style.maxWidth='580px';
- wrap.innerHTML='<div class="hub-title">계정 추가</div><div class="hub-sub">일반 회원이 보는 조치 안내를 이용할 수 있는 계정입니다.<br>CMS 확인 없이 발급하고, 체험용 로그인에서 이용합니다.</div>';
+ wrap.innerHTML='<div class="hub-title">계정 추가</div><div class="hub-sub">일반 회원이 보는 조치 안내를 이용할 수 있는 계정입니다.<br>CMS 확인 없이 발급하고, 관리자 로그인에서 이용합니다.</div>';
  document.getElementById('breadcrumb').textContent='관리자 · 계정 추가';
  appendAccountCreateForm(wrap);
  const back=document.createElement('button');back.className='admin-export-btn';back.textContent='관리자 화면으로';
@@ -165,7 +175,7 @@ function appendAccountCreateForm(wrap){
  password.oninput=confirm.oninput=()=>confirm.setCustomValidity(password.value===confirm.value?'':'비밀번호가 일치하지 않습니다.');
  form.onsubmit=async e=>{
   e.preventDefault();const button=form.querySelector('button');button.disabled=true;status.textContent='계정을 만드는 중...';
-  try{const identity=box.querySelector('#newAccountId').value.trim();const result=await cmsRequest('create-demo',{demoId:identity,password:password.value});password.value='';confirm.value='';status.textContent='계정 '+result.demoId+'을 만들었어요. 체험용 로그인에서 조치 안내를 볼 수 있습니다.';}
+  try{const identity=box.querySelector('#newAccountId').value.trim();const result=await cmsRequest('create-demo',{demoId:identity,password:password.value});password.value='';confirm.value='';status.textContent='계정 '+result.demoId+'을 만들었어요. 관리자 로그인에서 조치 안내를 볼 수 있습니다.';}
   catch(e){status.textContent=e.message;}
   finally{button.disabled=false;}
  };

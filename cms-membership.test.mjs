@@ -119,6 +119,57 @@ test('administrator IDs map to an isolated address namespace and existing email 
  assert.equal(context.adminLoginEmail(' existing@example.com '),'existing@example.com');
  for(const input of ['ab','../admin','AABB','한글관리자','a b c'])assert.throws(()=>context.adminLoginEmail(input));
 });
+
+function managedLoginFixture({membership={admin:true},authError=null,sessionError=null,membershipError=false}={}){
+ const calls=[],user={id,email:'existing@example.test'};
+ const context=vm.createContext({sb:{auth:{
+  async signInWithPassword(values){calls.push({action:'password',email:values.email});return authError?{data:null,error:{code:authError}}:{data:{user},error:null};},
+  async setSession(session){calls.push({action:'setSession'});return{data:{user},error:sessionError};},
+  async signOut(){calls.push({action:'signOut'});}
+ }}});
+ vm.runInContext(fs.readFileSync(new URL('./cms-membership-ui.js',import.meta.url),'utf8'),context);
+ context.cmsRequest=async(action,values)=>{calls.push({action,values});if(action==='login-demo')return{session:{access_token:'test',refresh_token:'test'}};if(membershipError)throw Error('inactive');return membership;};
+ return{calls,user,login:(identity='helperadmin01')=>context.signInManagedAccount(identity,'fixture-password')};
+}
+
+test('one managed login accepts existing administrators and converted viewing accounts without changing roles',async()=>{
+ for(const membership of [{admin:true},{demo:true,demoId:'helperadmin01'}]){
+  const f=managedLoginFixture({membership});assert.equal(await f.login(),f.user);
+  assert.deepEqual(f.calls.map(x=>x.action),['password','session']);
+  assert.equal(membership.role,undefined);
+ }
+ const admin=managedLoginFixture();await admin.login('existing@example.test');assert.equal(admin.calls[0].email,'existing@example.test');
+});
+
+test('new viewing accounts use the server demo resolver after a namespace credential mismatch',async()=>{
+ const f=managedLoginFixture({authError:'invalid_credentials',membership:{demo:true,demoId:'companydemo01'}});
+ assert.equal(await f.login('companydemo01'),f.user);
+ assert.deepEqual(f.calls.map(x=>x.action),['password','login-demo','setSession','session']);
+ assert.equal(f.calls[1].values.demoId,'companydemo01');
+});
+
+test('managed login rejects CMS-only and inactive accounts and clears their authenticated session',async()=>{
+ for(const options of [{membership:{cmsId:'0001',stores:['서울']}},{membership:{}},{membershipError:true}]){
+  const f=managedLoginFixture(options);await assert.rejects(f.login());
+  assert.equal(f.calls.at(-1).action,'signOut');
+ }
+});
+
+test('managed login does not retry network, rate-limit, or email credential failures as demo login',async()=>{
+ for(const code of ['over_request_rate_limit','request_timeout']){
+  const f=managedLoginFixture({authError:code});await assert.rejects(f.login());assert.equal(f.calls.length,1);
+ }
+ const email=managedLoginFixture({authError:'invalid_credentials'});await assert.rejects(email.login('existing@example.test'));assert.equal(email.calls.length,1);
+ const set=managedLoginFixture({authError:'invalid_credentials',sessionError:{message:'failed'}});await assert.rejects(set.login());assert.ok(!set.calls.some(x=>x.action==='session'));
+});
+
+test('published membership UI matches its source and has only one managed login entry',()=>{
+ const source=fs.readFileSync(new URL('./cms-membership-ui.js',import.meta.url),'utf8');
+ const html=fs.readFileSync(new URL('./index.html',import.meta.url),'utf8');
+ const embedded=html.split('/* CMS MEMBERSHIP START */')[1].split('/* CMS MEMBERSHIP END */')[0].trim();
+ assert.equal(embedded,source.trim());assert.doesNotMatch(source,/authDemoBtn|체험용 로그인/);
+ assert.match(source,/id="authAdminBtn">관리자 로그인/);
+});
 test('retired administrator creation cannot grant privileges, even from stale authenticated clients',async()=>{
  const body={action:'create-admin',adminId:'helperadmin01',password:'long-test-password',role:'admin'};
  for(const [f,token] of [[fixture({admin:true}),'anon'],[fixture(),'staff-token'],[fixture({demo:true}),'demo-token'],[fixture({admin:true}),'admin-token']]){
