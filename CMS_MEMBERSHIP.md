@@ -32,3 +32,10 @@
 관리자 대시보드의 `회원 가입 승인`에서 CMS ID와 연결 지점을 확인해 승인합니다. CMS ID 일치만으로 CMS 계정의 실제 소유가 입증되지는 않으므로 승인 과정에서 신청자를 확인해야 합니다. 승인 중 Auth 활성화만 실패하면 같은 항목의 활성화 재시도를 사용합니다.
 
 기존 일반 이메일 계정은 기록을 보존하되 새 CMS 가입과 승인을 거쳐 이용합니다. 비밀번호 재설정은 기존 관리자 이메일 경로만 제공하며, 일반 회원의 헬퍼 비밀번호 문의는 관리자에게 연결합니다. 반려된 신청의 재신청 처리, 승인된 계정의 이용 중지 화면은 아직 제공하지 않습니다.
+# Company demo accounts and Auth ordering fix (2026-10-16)
+
+Existing administrators can use 관리자 → 체험 계정 추가 to provision a separate company demo ID. It does not query S3 or create a CMS membership. Colleagues use 체험용 로그인. The account can read troubleshooting guides and media; it has no administrator/editor access and does not submit real store usage events or feedback.
+
+`202610160002_deferred_signup_validation.sql` validates the final server-controlled Auth metadata with a deferred constraint trigger. Supabase Auth inserts a user before updating app metadata in the same transaction; validating the initial INSERT incorrectly rejected both CMS and standalone administrator creation. No untrusted user metadata grants access. Demo read-only restrictions are enforced in the database as well as the UI.
+
+Provisioning still requires an existing, server-verified administrator. Password entry and account submission are completed by the administrator. Set `helper_demo_accounts.active=false` to revoke demo guide access. An inactive demo must not receive a session from the demo login endpoint.
