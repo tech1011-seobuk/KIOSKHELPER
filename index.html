@@ -10471,7 +10471,15 @@ function renderChat(){
   greeting.innerHTML='<div class="avatar bot">🤖</div><div class="bubble bot">안녕하세요, 점주님. 키오스크 챗봇입니다.</div>';
   inner.appendChild(greeting);
   appendSymptomVideos(inner,TREES[first.symptomId]);
-  const scrollToCurrent=()=>{area.scrollTop=path.length===1&&!first.chosen?0:area.scrollHeight;};
+  const scrollToCurrent=()=>{
+    if(path.length===1&&!first.chosen){area.scrollTop=0;window.scrollTo({top:0,behavior:'instant'});return;}
+    const messages=inner.querySelectorAll('.msg-row, .end-card');
+    const latest=messages[messages.length-1];
+    if(latest){
+      latest.style.scrollMarginTop=((document.querySelector('.topbar')?.offsetHeight||0)+16)+'px';
+      latest.scrollIntoView({block:'start',behavior:'instant'});
+    }
+  };
   crumb.innerHTML = '<b>'+first.symptomId+'</b><span class="sep">·</span>'+SYMPTOM_LABEL[first.symptomId];
 
   let stepCounter = 0;
