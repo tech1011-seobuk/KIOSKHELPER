@@ -6,12 +6,18 @@ export function createMembershipHandler({url,serviceKey,anonKey,mapping,sha256,f
  async function request(path,{method='GET',body,token=serviceKey,key=serviceKey,prefer}={}){
   const response=await fetchImpl(url+path,{method,headers:{apikey:key,Authorization:'Bearer '+token,'Content-Type':'application/json',...(prefer?{Prefer:prefer}:{})},body:body===undefined?undefined:JSON.stringify(body),signal:AbortSignal.timeout(15000)});
   let data;try{data=await response.json();}catch{data=null;}
-  if(!response.ok)throw new ApiError('SERVICE_REQUEST_FAILED',503);
+  if(!response.ok){
+   const error=new ApiError('SERVICE_REQUEST_FAILED',503);
+   // Preserve only the documented duplicate classification, never raw upstream details.
+   error.duplicate=data?.code==='email_exists'||data?.error_code==='email_exists';
+   throw error;
+  }
   return data;
  }
  const rest=(path,options)=>request('/rest/v1/'+path,options);
  const member=async id=>(await rest('helper_cms_memberships?user_id=eq.'+encodeURIComponent(id)+'&select=*'))?.[0];
  const cmsMember=async id=>(await rest('helper_cms_memberships?cms_id=eq.'+encodeURIComponent(id)+'&select=*'))?.[0];
+ const demoAccount=async (column,id)=>(await rest('helper_demo_accounts?'+column+'=eq.'+encodeURIComponent(id)+'&select=user_id,login_id,active'))?.[0];
  const emailFor=async id=>'cms-'+await sha256(encoder.encode(id))+'@members.kioskhelper.invalid';
  async function authenticated(req){
   const token=req.headers.get('authorization')?.replace(/^Bearer\s+/i,'');
@@ -46,6 +52,16 @@ export function createMembershipHandler({url,serviceKey,anonKey,mapping,sha256,f
    let body;try{body=JSON.parse(raw);}catch{fail('INVALID_REQUEST');}
    if(!body||typeof body!=='object')fail('INVALID_REQUEST');
    const action=body.action;
+   if(action==='login-demo'){
+    const id=typeof body.demoId==='string'?body.demoId.trim():'';
+    if(!/^[a-z][a-z0-9_]{3,39}$/.test(id)||typeof body.password!=='string'||body.password.length<12||body.password.length>128)fail('LOGIN_NOT_AVAILABLE',401);
+    await rate(req,'demo-login:'+id);
+    const account=await demoAccount('login_id',id);
+    if(!account?.active)fail('LOGIN_NOT_AVAILABLE',401);
+    let session;try{session=await request('/auth/v1/token?grant_type=password',{method:'POST',body:{email:'demo-'+id+'@demos.kioskhelper.invalid',password:body.password},token:anonKey,key:anonKey});}catch{fail('LOGIN_NOT_AVAILABLE',401);}
+    if(session?.user?.id!==account.user_id)fail('LOGIN_NOT_AVAILABLE',401);
+    return respond({session:{access_token:session.access_token,refresh_token:session.refresh_token}});
+   }
    if(action==='signup'||action==='login'){
     const id=typeof body.cmsId==='string'?body.cmsId.trim():'';
     if(!id||id.length>100||/[\u0000-\u001f\u007f]/.test(id))fail('CMS_ID_INVALID');
@@ -72,22 +88,26 @@ export function createMembershipHandler({url,serviceKey,anonKey,mapping,sha256,f
    const caller=await authenticated(req);
    if(action==='session'){
     if(caller.admin)return respond({admin:true});
+    const demo=await demoAccount('user_id',caller.user.id);
+    if(demo){if(!demo.active)fail('LOGIN_NOT_AVAILABLE',403);return respond({admin:false,demo:true,demoId:demo.login_id});}
     const m=await member(caller.user.id);
     if(m?.status!=='approved')fail('APPROVAL_REQUIRED',403);
     const latest=await refresh(m);
     return respond({admin:false,cmsId:m.cms_id,stores:latest.stores});
    }
    if(!caller.admin)fail('ADMIN_REQUIRED',403);
-   if(action==='create-admin'){
-    const id=typeof body.adminId==='string'?body.adminId.trim():'';
+   if(action==='create-admin'||action==='create-demo'){
+    const demo=action==='create-demo';
+    const identity=demo?body.demoId:body.adminId;
+    const id=typeof identity==='string'?identity.trim():'';
     if(!/^[a-z][a-z0-9_]{3,39}$/.test(id))fail('ADMIN_ID_INVALID');
     if(typeof body.password!=='string'||body.password.length<12||body.password.length>128)fail('ADMIN_PASSWORD_INVALID');
     await rate(req,'admin-create:'+caller.user.id);
     try{
-     const user=await request('/auth/v1/admin/users',{method:'POST',body:{email:'admin-'+id+'@admins.kioskhelper.invalid',password:body.password,email_confirm:true,user_metadata:{display_name:id},app_metadata:{helper_admin_signup:'v1',admin_id:id,created_by:caller.user.id}}});
+     const user=await request('/auth/v1/admin/users',{method:'POST',body:{email:demo?'demo-'+id+'@demos.kioskhelper.invalid':'admin-'+id+'@admins.kioskhelper.invalid',password:body.password,email_confirm:true,user_metadata:{display_name:id},app_metadata:demo?{helper_demo_signup:'v1',demo_id:id,created_by:caller.user.id}:{helper_admin_signup:'v1',admin_id:id,created_by:caller.user.id}}});
      if(!user?.id)fail('ADMIN_CREATE_FAILED',503);
-    }catch{fail('ADMIN_CREATE_FAILED',400);}
-    return respond({adminId:id,status:'created'});
+    }catch(error){fail(error.duplicate?'ADMIN_ID_TAKEN':'ADMIN_CREATE_FAILED',error.duplicate?409:503);}
+    return respond(demo?{demoId:id,status:'created'}:{adminId:id,status:'created'});
    }
    if(action==='list'){
     const offset=Number.isSafeInteger(body.offset)&&body.offset>=0?body.offset:0;
