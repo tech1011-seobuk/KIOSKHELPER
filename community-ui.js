@@ -30,7 +30,6 @@ function helperInit(){
   `;document.head.appendChild(style);
 }
 function helperNavigation(){
-  if(APP_ENV!=='staging')return;
   helperInit();
   let nav=document.getElementById('helperNav');
   if(!nav){
@@ -187,7 +186,6 @@ function helperNoticeEditor(content,row={}){
   };
 }
 async function helperCheckNotices(){
-  if(APP_ENV!=='staging')return;
   if(!currentUser||helperNoticeBusy||helperNoticeOwner===currentUser.id||appState!=='hub')return;
   const owner=currentUser.id;helperNoticeBusy=true;
   try{
@@ -252,7 +250,6 @@ async function renderSuggestionsScreen(){
 function helperStartAttempt(symptomId){helperAttempt={id:crypto.randomUUID(),symptomId,startedAt:Date.now()};}
 function helperAttemptDetail(){return helperAttempt?JSON.stringify({v:2,attempt:helperAttempt.id}):null;}
 function helperAddRating(container){
-  if(APP_ENV!=='staging')return;
   if(!helperAttempt||!currentUser)return;
   const attempt=helperAttempt.id,owner=currentUser.id;
   const box=document.createElement('section');box.className='helper-rating';container.appendChild(box);
@@ -313,7 +310,6 @@ function helperDetailSection(title,headers,rows,note){
   return section;
 }
 async function helperRenderPerformance(events,profiles){
-  if(APP_ENV!=='staging')return;
   const area=document.getElementById('chatArea'),owner=currentUser.id;
   const host=document.createElement('section');host.className='helper-panel';host.id='helperPerformance';
   area.prepend(host);let ratings=[],ratingFailed=false,suggestions=[];
