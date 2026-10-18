@@ -80,8 +80,8 @@ test('non-hot-topic symptoms load their published guide before opening the chat'
 });
 test('printer replacement remembers the chosen model and clears it when choosing again',()=>{
   const elements=new Map();
-  const element=()=>({innerHTML:'',textContent:'',setAttribute(){},classList:{remove(){}},append(...children){children.forEach(c=>this.appendChild(c));},appendChild(child){this.innerHTML+=child.innerHTML;}});
-  const context=vm.createContext({URL,document:{getElementById(id){if(!elements.has(id))elements.set(id,element());return elements.get(id);},createElement:element},clearTimeout(){},logEvent(...args){context.events.push(args);},events:[],render(){},updateResetButton(){}});
+  const element=replacementTestElement;
+  const context=vm.createContext({URL,document:{getElementById(id){if(!elements.has(id))elements.set(id,element());return elements.get(id);},createElement:element,createDocumentFragment:()=>element('fragment')},takeGuideSearchVariant:()=>0,clearTimeout(){},logEvent(...args){context.events.push(args);},events:[],render(){},updateResetButton(){}});
   vm.runInContext(inlineVideoSource(),context);
   vm.runInContext(section('let selectedEquipReplaceDevice = null;', 'let pendingCameraAction')+"\nlet appState,selectedDevice,screenSwapTimer,screenEnterTimer;const EQUIP_REPLACE_DEVICES=[{name:'프린터',icon:'🖨️'}];\n"+section('function goToPrinterModel(', 'function goToColorModel('),context);
   for(const [id,label] of [['rx1','DNP RX1'],['ask400','후지필름 ASK-400']]){
@@ -119,8 +119,8 @@ test('camera setup video follows the selected model and renders inline',()=>{
   }
 });
 test('replacement cards navigate, finish, restart and reset type without mixing videos',()=>{
-  const element=()=>({children:[],_html:'',set innerHTML(v){this._html=v;this.children=[];},get innerHTML(){return this._html;},textContent:'',setAttribute(){},focus(){},append(...children){this.children.push(...children);},appendChild(child){this.children.push(child);}});
-  const ctx=vm.createContext({URL,document:{createElement:element}});vm.runInContext(inlineVideoSource(),ctx);
+  const element=replacementTestElement;
+  const ctx=vm.createContext({URL,document:{createElement:element,createDocumentFragment:()=>element('fragment')}});vm.runInContext(inlineVideoSource(),ctx);
   vm.runInContext(section('const REPLACEMENT_MEDIA =','function renderEquipReplaceDetailScreen()'),ctx);
   const host=element();ctx.host=host;
   vm.runInContext("appendReplacementGuide(host,'지폐투입기')",ctx);
@@ -447,3 +447,13 @@ test('existing sessions migrate without logging out and storage failure falls ba
 });
 
 function inlineVideoSource(){return "const SYMPTOM_VIDEO_NAME='증상 전체 영상';\n"+section('function youtubeManualUrl(', 'function symptomVideoUrl(')+section('function createManualVideo(', 'function openSymptomVideo(');}
+
+
+function replacementTestElement(tag='div'){
+ return {tag,children:[],style:{},dataset:{},_html:'',textContent:'',classList:{remove(){}},
+ get innerHTML(){return this._html+this.children.map(c=>c.innerHTML||'').join('');},set innerHTML(v){this._html=v;this.children=[];},
+ setAttribute(){},focus(){},getBoundingClientRect(){return {height:300};},
+ append(...xs){xs.forEach(x=>this.appendChild(x));},appendChild(x){if(x.tag==='fragment')this.children.push(...x.children);else this.children.push(x);return x;},
+ replaceChildren(...xs){this.children=[];this.append(...xs);},querySelector(tag){for(const x of this.children){if(x.tag===tag)return x;const child=x.querySelector?.(tag);if(child)return child;}return null;}
+ };
+}
