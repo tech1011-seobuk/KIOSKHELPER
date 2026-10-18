@@ -1,4 +1,4 @@
-import {readFileSync,writeFileSync,mkdirSync,cpSync,existsSync,lstatSync} from 'node:fs';
+import {readFileSync,writeFileSync,mkdirSync,cpSync,existsSync,lstatSync,readdirSync} from 'node:fs';
 import {resolve} from 'node:path';
 import vm from 'node:vm';
 const [sourceArg,outArg,version]=process.argv.slice(2),source=resolve(sourceArg),out=resolve(outArg);
@@ -16,6 +16,7 @@ for(const [a,b] of [
  ['<meta name="theme-color" content="#7a3b12">','<meta name="theme-color" content="#1f1f23">'],
  ['<meta name="apple-mobile-web-app-title" content="🧪테스트 헬퍼">','<meta name="apple-mobile-web-app-title" content="포토이즘 헬퍼">']
 ])html=replaceOnce(html,a,b);
+html=html.replaceAll('https://tech1011-seobuk.github.io/kioskhelper-staging/','https://tech1011-seobuk.github.io/KIOSKHELPER/');
 html=html.replace(/<div id="stagingBanner">[^<]*<\/div>/,'');
 if(html.includes('mjzhljlhjsbnnxyekmwy')||html.includes('sb_publishable_7f69TqsA11Ol_iLitneqEw_ker_V9px')||html.includes('id="stagingBanner"'))throw Error('Staging configuration leaked');
 for(const match of html.matchAll(/<script\b[^>]*>([\s\S]*?)<\/script>/gi))new vm.Script(match[1]);
@@ -24,5 +25,12 @@ let sw=read('sw.js');if(!/const CACHE_NAME = 'photoism-helper-staging-v\d+';/.te
 sw=sw.replace(/const CACHE_NAME = 'photoism-helper-staging-v\d+';/,"const CACHE_NAME = 'photoism-helper-v"+version+"';").replace('^photoism-helper-staging-v','^photoism-helper-v');new vm.Script(sw);writeFileSync(resolve(out,'sw.js'),sw);
 const manifest=JSON.parse(read('manifest.json'));Object.assign(manifest,{name:'포토이즘 헬퍼',short_name:'포토이즘 헬퍼',description:'포토이즘·스내피즘 키오스크 진단 도구',theme_color:'#1f1f23'});writeFileSync(resolve(out,'manifest.json'),JSON.stringify(manifest,null,2)+'\n');
 for(const name of ['icon-192.png','icon-512.png','assets','css','js','images','fonts']){const path=resolve(source,name);if(existsSync(path)){if(lstatSync(path).isSymbolicLink())throw Error('Symlink not allowed');cpSync(path,resolve(out,name),{recursive:true});}}
+// Keep standalone modules and their data in sync with the built application.
+for(const name of readdirSync(source)){
+ if(!/\.(js|json|css)$/.test(name)||['sw.js','manifest.json'].includes(name))continue;
+ const path=resolve(source,name);if(!lstatSync(path).isFile())throw Error('Expected regular source file: '+name);
+ const text=read(name).replaceAll('https://tech1011-seobuk.github.io/kioskhelper-staging/','https://tech1011-seobuk.github.io/KIOSKHELPER/');
+ writeFileSync(resolve(out,name),text);
+}
 writeFileSync(resolve(out,'.nojekyll'),'');
 console.log('Production bundle verified: '+version);
