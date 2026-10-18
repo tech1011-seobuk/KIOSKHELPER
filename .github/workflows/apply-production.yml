@@ -76,6 +76,9 @@ jobs:
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           git add index.html sw.js manifest.json icon-192.png icon-512.png .nojekyll
+          for file in *.js *.json *.css; do
+            if [ -f "$file" ]; then git add -- "$file"; fi
+          done
           for dir in assets css js images fonts; do
             if [ -d "$dir" ]; then git add "$dir"; fi
           done
