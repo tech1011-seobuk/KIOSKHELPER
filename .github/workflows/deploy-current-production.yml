@@ -30,6 +30,9 @@ jobs:
           mkdir public-site
           cp index.html sw.js manifest.json icon-192.png icon-512.png .nojekyll public-site/
           cp -R assets public-site/assets
+          for file in BufferGeometryUtils.js GLTFLoader.js three.core.js three.module.js camera-geometry.js camera-models.js camera-single-shot.json photoism-model.js photoism-picker.js photoism-callouts.css snapism-model.js snapism-manuals-ui.js snapism-manuals.json guide-search.js guide-search.css editable-manuals.js editable-manuals.json ending-guides-ui.js; do
+            cp -- "$file" public-site/
+          done
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v4
         with:
