@@ -1993,6 +1993,24 @@ html[data-theme=light] .kiosk-line-overlay *{stroke:#28628b}
 @media(max-width:600px){.primary-navigation{gap:8px;padding-top:10px}.primary-navigation #homeBtn,.primary-navigation #resetBtn{min-height:48px;font-size:15px;padding:11px 10px}}
 /* PRIMARY NAVIGATION END */
 
+/* BALANCED DASHBOARD CSS START */
+.db-dashboard{max-width:1160px;width:100%;padding:4px 0 32px;text-align:left;--db-success:#8bd9b1;--db-contact:#e4b875;--db-as:#ba9eda;--db-info:#82badc;--db-pending:#737b87}
+html[data-theme="light"] .db-dashboard{--db-success:#237b52;--db-contact:#956126;--db-as:#8264a4;--db-info:#306d94;--db-pending:#9aa3aa}
+.db-dashboard *{box-sizing:border-box}.db-dashboard [hidden]{display:none!important}
+.db-header{display:flex;justify-content:space-between;align-items:center;gap:20px;margin-bottom:24px}.db-eyebrow{font-size:11px;font-weight:700;letter-spacing:.08em;color:var(--muted)}.db-header h1{font-size:30px;margin:8px 0;font-weight:800;letter-spacing:-1px}.db-header p{margin:0;color:var(--muted);font-size:14px}.db-actions{display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end}
+.db-dashboard button,.db-dashboard select,.db-dialog button{font:inherit;color:var(--text);background:var(--panel2);border:1px solid var(--border);border-radius:10px;padding:10px 13px;cursor:pointer}.db-dashboard button:hover,.db-dialog button:hover{border-color:var(--accent)}.db-dashboard button:focus-visible,.db-dashboard select:focus-visible,.db-dialog button:focus-visible{outline:2px solid var(--accent);outline-offset:3px}.db-actions button{font-size:12px;min-height:42px}.db-actions button:first-child{background:var(--accent);color:var(--accent-contrast,#202114);font-weight:700}
+.db-filters{display:flex;flex-wrap:wrap;gap:12px;padding:16px;background:var(--panel);border:1px solid var(--border);border-radius:14px}.db-filters label{display:flex;align-items:center;gap:10px;font-size:12px;color:var(--muted);flex:1;min-width:160px}.db-filters select{min-width:0;flex:1;font-size:13px}.db-scope{font-size:12px;color:var(--muted);margin:12px 2px 20px}
+.db-stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin-bottom:24px}.db-stat{min-width:0;border:1px solid var(--border);background:var(--panel);border-radius:16px;padding:19px}.db-stat>span{display:block;font-size:13px;color:var(--muted)}.db-stat>strong{display:block;font-size:32px;font-weight:800;letter-spacing:-1px;margin:10px 0;color:var(--text);font-variant-numeric:tabular-nums}.db-stat em{font-size:14px;font-style:normal;letter-spacing:0;margin-left:5px;font-weight:500;color:var(--muted)}.db-stat small{font-size:11px;color:var(--muted);line-height:1.6;display:block}
+.db-tabs{display:flex;gap:6px;border-bottom:1px solid var(--border);padding-bottom:10px;margin-bottom:22px;flex-wrap:wrap}.db-tabs button{font-size:13px;border-color:transparent;background:transparent;min-height:44px}.db-tabs button[aria-selected=true]{background:var(--accent);color:var(--accent-contrast,#202114);font-weight:700}
+.db-panel{background:var(--panel);border:1px solid var(--border);border-radius:16px;padding:22px;margin-bottom:18px;min-width:0}.db-panel-title{margin-bottom:18px}.db-panel h2{margin:0 0 7px;font-size:16px;font-weight:750;letter-spacing:-.25px}.db-muted{font-size:12px;color:var(--muted);line-height:1.65;margin:4px 0}.db-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:18px}.db-grid .db-panel{margin-bottom:18px}.db-priority-panel{border-top:3px solid var(--accent)}.db-priorities{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(240px,100%),1fr));gap:12px}.db-priority{display:flex;flex-direction:column;align-items:flex-start;gap:8px;text-align:left;padding:18px!important;background:var(--panel2)!important}.db-priority>strong{font-size:15px}.db-priority>span:not(.db-chip),.db-priority>small{color:var(--muted);font-size:12px}.db-priority>b{font-size:27px}.db-chip{display:inline-block;border-radius:7px;background:rgba(var(--glass-rgb),.6);border:1px solid var(--border);color:var(--text);font-size:11px;padding:4px 7px}.db-priority-empty{padding:12px 0}.db-priority-empty strong{font-size:14px}.db-priority-empty p{color:var(--muted);font-size:13px;line-height:1.7}.db-priority-empty button{font-size:12px}
+.db-outcome-strip{display:flex;height:12px;border-radius:7px;overflow:hidden;margin:4px 0 18px;background:var(--panel2)}.db-mark-solved{background:var(--db-success)}.db-mark-escalate{background:var(--db-contact)}.db-mark-as{background:var(--db-as)}.db-mark-info{background:var(--db-info)}.db-mark-pending{background:var(--db-pending)}.db-results>div{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid var(--border);font-size:13px}.db-results>div:last-child{border:0}.db-results span{display:flex;align-items:center;gap:8px}.db-results i{width:8px;height:8px;border-radius:50%;flex-shrink:0}.db-results b{white-space:nowrap;font-variant-numeric:tabular-nums}.db-note{margin-top:15px;font-size:12px;color:var(--muted);line-height:1.7;padding:12px;border-radius:10px;background:var(--panel2)}
+.db-bars{display:grid;gap:17px}.db-bar-label{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;font-size:13px;margin-bottom:8px}.db-bar-label span{overflow-wrap:anywhere}.db-bar-label b{white-space:nowrap;font-variant-numeric:tabular-nums}.db-track{height:6px;background:var(--panel2);border-radius:4px;overflow:hidden}.db-track>span{height:100%;display:block;background:var(--accent);border-radius:4px}.db-trend{display:flex;gap:6px;align-items:end;padding-top:8px}.db-trend>div{flex:1;min-width:0;text-align:center}.db-trend-space{height:100px;display:flex;align-items:end;justify-content:center}.db-trend-space span{background:var(--accent);width:70%;border-radius:4px 4px 0 0;min-height:0}.db-trend-num{display:block;font-size:11px;height:20px}.db-trend small{font-size:10px;color:var(--muted);display:block;height:20px;margin-top:8px;white-space:nowrap}
+.db-table-wrap{width:100%;overflow:auto;border-radius:8px}.db-table{border-collapse:collapse;width:100%;font-size:13px;min-width:460px}.db-table th{font-size:11px;font-weight:500;color:var(--muted);text-align:left;background:var(--panel2);padding:12px 10px;white-space:nowrap}.db-table td{padding:14px 10px;border-bottom:1px solid var(--border);vertical-align:middle;font-variant-numeric:tabular-nums}.db-table td:first-child{min-width:180px;max-width:290px;overflow-wrap:anywhere}.db-table td strong{font-size:13px;font-weight:600}.db-table td:not(:first-child){white-space:nowrap}.db-table td button{font-size:12px}.db-sub{display:block;font-size:11px;color:var(--muted);margin-top:6px}.db-empty{padding:22px 8px;text-align:center;color:var(--muted);font-size:13px;line-height:1.8}.db-time-value{font-size:40px;font-weight:750;margin:24px 0 8px}.db-message{padding:16px 0;border-bottom:1px solid var(--border)}.db-message:last-child{border:0}.db-message>div{display:flex;justify-content:space-between;align-items:center;gap:12px}.db-message strong{font-size:14px}.db-message p{font-size:13px;line-height:1.7}.db-message small{font-size:11px;color:var(--muted)}.db-message-body{white-space:pre-wrap;overflow-wrap:anywhere}.db-chips{display:flex;gap:8px;flex-wrap:wrap}.db-defs{padding:14px 0;color:var(--muted);font-size:12px;line-height:1.8}.db-defs summary{cursor:pointer;min-height:44px;padding-top:10px}.db-defs ul{padding-left:22px}.db-defs li{margin:8px 0}
+.db-dialog{background:var(--panel);color:var(--text);border:1px solid var(--border);border-radius:18px;width:min(620px,calc(100% - 28px));max-height:85dvh;overflow:auto;padding:25px;box-shadow:0 20px 80px #0005}.db-dialog::backdrop{background:#0008;backdrop-filter:blur(3px)}.db-dialog-head{display:flex;justify-content:space-between;align-items:flex-start;gap:18px}.db-dialog h2{font-size:20px;margin:9px 0}.db-dialog h3{font-size:14px;margin-top:25px}.db-dialog p{font-size:13px}.db-dialog button{flex-shrink:0}
+@media(max-width:850px){.db-header{align-items:flex-start;flex-direction:column}.db-actions{justify-content:flex-start}.db-stats{grid-template-columns:repeat(2,minmax(0,1fr))}.db-grid{grid-template-columns:1fr}.db-panel{padding:18px}.db-filters label{min-width:210px}.db-grid .db-panel{margin-bottom:0}.db-grid{margin-bottom:18px}.db-header h1{font-size:26px}}
+@media(max-width:480px){.db-dashboard{padding-top:0}.db-header{gap:16px;margin-bottom:18px}.db-actions{width:100%}.db-actions button{flex:1;padding:10px 7px;font-size:11px;min-height:44px}.db-filters{padding:12px;gap:10px}.db-filters label{min-width:100%;display:grid;grid-template-columns:48px 1fr}.db-filters select{width:100%;font-size:16px;min-height:44px}.db-stat{padding:14px 12px}.db-stat>strong{font-size:27px}.db-stat>span{font-size:12px}.db-stats{gap:9px}.db-tabs{display:grid;grid-template-columns:1fr 1fr;gap:5px}.db-tabs button{font-size:12px;padding:10px 5px}.db-panel{padding:16px 13px}.db-panel h2{font-size:15px}.db-bar-label{font-size:12px}.db-trend{gap:3px}.db-trend small{font-size:10px}.db-message>div{align-items:flex-start;flex-wrap:wrap}.db-dialog{padding:18px}.db-dialog-head h2{font-size:18px}.db-dialog button{min-height:44px}}
+
+/* BALANCED DASHBOARD CSS END */
 </style>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 <style>#endingGuideDialog label{display:flex;flex-direction:column;gap:6px;margin:14px 0}#endingGuideDialog input,#endingGuideDialog select,#endingGuideDialog textarea{box-sizing:border-box;width:100%;padding:10px;color:inherit;background:var(--panel,#24262c);border:1px solid #626773;border-radius:8px;font:inherit}#endingGuideDialog button{padding:10px;margin:6px 0;border-radius:8px;cursor:pointer}#endingGuideDialog::backdrop{background:#0009}#endingGuideDialog p{font-size:13px;line-height:1.6}</style></head>
@@ -7510,6 +7528,147 @@ function openStepReviewReport(){
 }
 
 /* STEP REVIEWS END */
+/* BALANCED DASHBOARD START */
+/* Dashboard uses existing read-only records; it does not infer abandonment or actual support contacts. */
+const HelperDashboard = (() => {
+  const DAY = 86400000, KST = 9 * 3600000;
+  const outcomes = ['solved', 'escalate', 'as', 'info'];
+  const labels = {solved:'해결 확인', escalate:'채널톡 문의 안내', as:'A/S 안내', info:'안내 확인 완료', pending:'진행 중·결과 미응답'};
+  const esc = value => String(value ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  const pct = (n, d) => d ? Math.round(n / d * 1000) / 10 : null;
+  const rate = value => value === null ? '—' : value.toLocaleString('ko-KR') + '%';
+  const num = n => Number(n || 0).toLocaleString('ko-KR');
+  const dayKey = time => new Date(time + KST).toISOString().slice(0, 10);
+  const sid = value => value === 'PRT-13' ? 'PRT-7' : value;
+  const groupKey = e => JSON.stringify([e.brand || '', e.device || '', sid(e.symptom_id) || '']);
+  const emptyCounts = () => ({solved:0, escalate:0, as:0, info:0, pending:0});
+  function metadata(e) { try { const m=JSON.parse(e.detail); return m?.v === 2 && typeof m.attempt === 'string' && m.attempt.length > 0 && m.attempt.length < 100 ? m : null; } catch { return null; } }
+  function isViewing(p) { return p?.role === 'demo' || (p?.role !== 'admin' && /@(?:viewers|demos|admins)\.kioskhelper\.invalid$/i.test(p?.email || '')); }
+  function model(events, profiles, options = {}, now = Date.now()) {
+    const days = ['7','30','90','all'].includes(String(options.days)) ? String(options.days) : '30';
+    const since = days === 'all' ? -Infinity : now - Number(days) * DAY;
+    const people = new Map(profiles.map(p => [p.id,p]));
+    const includeAdmin = options.audience === 'all';
+    const allowed = e => {
+      const p=people.get(e.user_id);
+      return !isViewing(p) && (includeAdmin || (p && p.role !== 'admin'));
+    };
+    const all = events.filter(e => e.user_id && allowed(e) && Number.isFinite(Date.parse(e.created_at)) && Date.parse(e.created_at) <= now)
+      .map(e => ({...e, time:Date.parse(e.created_at), symptom_id:sid(e.symptom_id)})).sort((a,b) => a.time-b.time || String(a.id||'').localeCompare(String(b.id||''),undefined,{numeric:true}));
+    const matches = e => (!options.brand || e.brand === options.brand) && (!options.device || e.device === options.device);
+    const period = all.filter(e => e.time >= since && matches(e));
+    const clicks = period.filter(e => ['device_click','symptom_click'].includes(e.event_type));
+    const starts = new Map();
+    for(const e of all) {
+      const meta=metadata(e); if(!meta)continue;
+      const key=JSON.stringify([e.user_id,meta.attempt]);
+      if(e.event_type==='symptom_click' && !starts.has(key))starts.set(key,{...e, attempt:meta.attempt, outcome:null, end:null, support:false});
+      const a=starts.get(key); if(!a || a.brand!==e.brand || a.symptom_id!==e.symptom_id)continue;
+      if(e.event_type==='symptom_outcome' && outcomes.includes(e.outcome)){a.outcome=e.outcome;a.end=e.time;}
+      if(e.event_type==='support_click')a.support=true;
+    }
+    const attempts=[...starts.values()].filter(a=>a.time>=since&&matches(a));
+    const counts=emptyCounts();for(const a of attempts)counts[a.outcome||'pending']++;
+    const decided=counts.solved+counts.escalate+counts.as, answered=decided+counts.info;
+    const stats=new Map();
+    const entry=e=>{const key=groupKey(e);if(!stats.has(key))stats.set(key,{key,brand:e.brand,device:e.device,symptom_id:e.symptom_id,clicks:0,started:0,feedback:0,...emptyCounts()});return stats.get(key);};
+    for(const e of period){if(e.event_type==='symptom_click'&&e.symptom_id)entry(e).clicks++;if(e.event_type==='feedback'&&e.feedback&&e.symptom_id)entry(e).feedback++;}
+    for(const a of attempts){const s=entry(a);s.started++;s[a.outcome||'pending']++;}
+    const symptoms=[...stats.values()].map(s=>({...s,decided:s.solved+s.escalate+s.as,rate:pct(s.solved,s.solved+s.escalate+s.as),contactRate:pct(s.escalate,s.solved+s.escalate+s.as)})).sort((a,b)=>b.clicks-a.clicks||a.key.localeCompare(b.key));
+    const priorities=symptoms.filter(s=>s.decided>=10&&s.escalate>0).sort((a,b)=>b.contactRate-a.contactRate||b.escalate-a.escalate).slice(0,3);
+    const feedback=period.filter(e=>e.event_type==='feedback'&&String(e.feedback||'').trim()).reverse();
+    const legacy=period.filter(e=>e.event_type==='symptom_outcome'&&outcomes.includes(e.outcome)&&!metadata(e));
+    const legacyStats=new Map();
+    for(const e of legacy){const key=groupKey(e);if(!legacyStats.has(key))legacyStats.set(key,{...e,...emptyCounts(),total:0});const s=legacyStats.get(key);s[e.outcome]++;s.total++;}
+    const userRows=new Map(),branchRows=new Map(),devices=new Map(),brands=new Map();
+    for(const e of clicks){
+      userRows.set(e.user_id,(userRows.get(e.user_id)||0)+1);
+      const branch=String(e.branch_name||'').trim();if(branch)branchRows.set(branch,(branchRows.get(branch)||0)+1);
+      if(e.event_type==='device_click'){const key=JSON.stringify([e.brand||'',e.device||'미분류']);devices.set(key,(devices.get(key)||0)+1);}
+      brands.set(e.brand||'미분류',(brands.get(e.brand||'미분류')||0)+1);
+    }
+    const activeUsers=new Set(period.filter(e=>['device_click','symptom_click','symptom_outcome'].includes(e.event_type)).map(e=>e.user_id));
+    const durations=attempts.filter(a=>a.outcome==='solved'&&a.end>=a.time&&a.end-a.time<=3600000).map(a=>a.end-a.time).sort((a,b)=>a-b);
+    const median=durations.length?(durations[Math.floor((durations.length-1)/2)]+durations[Math.floor(durations.length/2)])/2:null;
+    const currentDay=Math.floor((now+KST)/DAY)*DAY-KST;
+    const dailyLength=days==='7'?7:14;
+    const daily=Array.from({length:dailyLength},(_,i)=>({day:dayKey(currentDay-(dailyLength-1-i)*DAY),count:0}));
+    const dailyMap=new Map(daily.map(d=>[d.day,d]));const hours=Array(24).fill(0);
+    for(const e of clicks){if(dailyMap.has(dayKey(e.time)))dailyMap.get(dayKey(e.time)).count++;hours[new Date(e.time+KST).getUTCHours()]++;}
+    const recent=attempts.filter(a=>['escalate','as'].includes(a.outcome)).sort((a,b)=>b.end-a.end);
+    const inactive=profiles.filter(p=>!isViewing(p)&&(includeAdmin||p.role!=='admin')&&!activeUsers.has(p.id));
+    const unknownBranch=clicks.filter(e=>!String(e.branch_name||'').trim()).length;
+    return {days,since,now,period,clicks,attempts,counts,decided,answered,rate:pct(counts.solved,decided),responseRate:pct(answered,attempts.length),symptoms,priorities,feedback,legacy,legacyStats:[...legacyStats.values()],userRows,branchRows,devices,brands,people,activeUsers,median,durationCount:durations.length,daily,hours,recent,inactive,unknownBranch,support:attempts.filter(a=>a.support).length,unpairedStarts:period.filter(e=>e.event_type==='symptom_click'&&!metadata(e)).length};
+  }
+  const sorted = map => [...map].sort((a,b)=>b[1]-a[1]);
+  const brandLabel = b => b==='photoism'?'포토이즘':b==='snapism'?'스내피즘':b||'미분류';
+  const stamp = t => new Date(t).toLocaleString('ko-KR',{timeZone:'Asia/Seoul',month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit'});
+  const duration = ms => ms===null?'—':ms<60000?Math.round(ms/1000)+'초':Math.round(ms/6000)/10+'분';
+  const blank = (text='선택한 조건의 기록이 아직 없어요.') => '<p class="db-empty">'+text+'</p>';
+  const table = (headers,rows,empty) => rows.length?'<div class="db-table-wrap" role="region" aria-label="'+esc(headers[0])+' 상세 표" tabindex="0"><table class="db-table"><thead><tr>'+headers.map(h=>'<th scope="col">'+h+'</th>').join('')+'</tr></thead><tbody>'+rows.map(cells=>'<tr>'+cells.map(c=>'<td>'+c+'</td>').join('')+'</tr>').join('')+'</tbody></table></div>':blank(empty);
+  const panel = (title,note,content,extra='') => '<section class="db-panel '+extra+'"><div class="db-panel-title"><h2>'+title+'</h2>'+(note?'<p class="db-muted">'+note+'</p>':'')+'</div>'+content+'</section>';
+  function bars(rows) {
+    if(!rows.length)return blank();const max=Math.max(...rows.map(x=>x[1]),1);
+    return '<div class="db-bars">'+rows.map(([label,n])=>'<div><div class="db-bar-label"><span>'+esc(label)+'</span><b>'+num(n)+'회</b></div><div class="db-track" aria-hidden="true"><span style="width:'+n/max*100+'%"></span></div></div>').join('')+'</div>';
+  }
+  function mount(area, events, profiles, actions) {
+    let options={days:'30',brand:'',device:'',audience:'members'}, tab='overview', chosen=null;
+    const root=document.createElement('section');root.className='admin-screen db-dashboard';root.id='balancedDashboard';area.replaceChildren(root);
+    const title=e=>actions.label(e.symptom_id)||e.symptom_id||'기타 안내';
+    const symptomCell=e=>'<strong>'+esc(title(e))+'</strong><span class="db-sub">'+esc(brandLabel(e.brand)+' · '+(e.device||'장비 미기록'))+'</span>';
+    function draw(focusId) {
+      const m=model(events,profiles,options), subtitle=options.audience==='all'?'관리자 활동 포함':'매장 이용 기준 · 관리자 활동 제외';
+      const defs='<details class="db-defs"><summary>집계 기준과 확인할 수 있는 범위</summary><ul><li>조치 시작·결과: 동일한 진행 기록은 마지막 결과 한 건만 집계합니다. 선택 기간에 시작한 조치 기준입니다.</li><li>해결 확인 비율 = 해결 확인 ÷ (해결 확인 + 채널톡 문의 안내 + A/S 안내). 안내 확인 완료와 미응답은 제외합니다.</li><li>결과 응답률 = 결과를 선택한 조치 ÷ 조치 시작. 안내 확인 완료를 포함합니다. 미응답을 실패나 이탈로 단정하지 않습니다.</li><li>채널톡 문의 안내는 안내 화면에 도달한 기록입니다. CMS 문의 이동은 버튼 클릭이며, 실제 상담 접수 여부는 확인하지 못합니다.</li><li>장비·증상 클릭수에는 반복 클릭이 포함됩니다. 지점은 활동 당시 기록된 지점명으로 묶습니다.</li><li>과거 기록 '+num(m.legacy.length)+'건은 중복 진행을 구분할 수 없어 별도로 표시합니다. 시간대는 한국 시간 기준입니다.</li><li>단계별 머문 시간·검색 실패·사진 부족 여부는 현재 기록만으로 확인할 수 없습니다. 스내피즘의 일부 기존 안내는 조치 결과 기록이 없어 브랜드 간 해결률을 단순 비교할 수 없습니다.</li></ul></details>';
+      const controls='<div class="db-filters"><label>기간<select id="dbPeriod">'+[['7','최근 7일'],['30','최근 30일'],['90','최근 90일'],['all','전체 기간']].map(([v,l])=>'<option value="'+v+'"'+(options.days===v?' selected':'')+'>'+l+'</option>').join('')+'</select></label><label>브랜드<select id="dbBrand"><option value="">전체 브랜드</option><option value="photoism"'+(options.brand==='photoism'?' selected':'')+'>포토이즘</option><option value="snapism"'+(options.brand==='snapism'?' selected':'')+'>스내피즘</option></select></label><label>장비<select id="dbDevice"><option value="">전체 장비</option>'+[...new Set(events.filter(e=>e.device&&(!options.brand||e.brand===options.brand)).map(e=>e.device))].sort().map(d=>'<option value="'+esc(d)+'"'+(options.device===d?' selected':'')+'>'+esc(d)+'</option>').join('')+'</select></label><label>이용자<select id="dbAudience"><option value="members"'+(options.audience==='members'?' selected':'')+'>매장 이용만</option><option value="all"'+(options.audience==='all'?' selected':'')+'>관리자 포함</option></select></label></div>';
+      const stat=(label,value,note)=>'<article class="db-stat"><span>'+label+'</span><strong>'+value+'</strong><small>'+note+'</small></article>';
+      const summaries='<div class="db-stats">'+stat('이용 매장',num(m.branchRows.size)+'<em>곳</em>','활동 계정 '+num(m.activeUsers.size)+'개 · 지점 미기록 클릭 '+num(m.unknownBranch)+'회')+stat('조치 시작',num(m.attempts.length)+'<em>건</em>','중복 진행 구분이 가능한 기록 기준')+stat('해결 확인 비율',rate(m.rate),'해결 '+num(m.counts.solved)+' / 결과 확인 '+num(m.decided)+'건')+stat('결과 응답률',rate(m.responseRate),'결과 응답 '+num(m.answered)+' / 시작 '+num(m.attempts.length)+'건')+'</div>';
+      let overview='';
+      const priorityCards=m.priorities.length?m.priorities.map(s=>'<button type="button" class="db-priority" data-detail="'+esc(s.key)+'"><span class="db-chip">문의 안내 비중 확인</span><strong>'+esc(title(s))+'</strong><span>'+esc(brandLabel(s.brand)+' · '+s.device)+'</span><b>'+rate(s.contactRate)+'</b><small>결과 '+num(s.decided)+'건 중 '+num(s.escalate)+'건 · 근거 보기 →</small></button>').join(''):'<div class="db-priority-empty"><strong>아직 보완 순위를 판단할 기록이 부족해요.</strong><p>증상별 결과가 10건 이상 쌓이면 채널톡 문의 안내 비율과 실제 의견을 함께 살펴볼 수 있어요.</p><button type="button" data-tab-link="feedback">사용자 의견 '+num(m.feedback.length)+'건 확인 →</button></div>';
+      overview+=panel('먼저 살펴볼 안내','채널톡 문의 안내 비율 순 · 증상별 결과 10건 이상 · 매뉴얼 부족을 확정하는 지표는 아닙니다.','<div class="db-priorities">'+priorityCards+'</div>','db-priority-panel');
+      const total=m.attempts.length;
+      const resultMarkup=(total?'<div class="db-outcome-strip" role="img" aria-label="'+esc(Object.entries(m.counts).map(([k,n])=>labels[k]+' '+n+'건').join(', '))+'">'+Object.entries(m.counts).filter(([,n])=>n>0).map(([k,n])=>'<span class="db-mark-'+k+'" style="width:'+n/total*100+'%"></span>').join('')+'</div>':'')+'<div class="db-results">'+Object.entries(m.counts).map(([k,n])=>'<div><span><i class="db-mark-'+k+'" aria-hidden="true"></i>'+labels[k]+'</span><b>'+num(n)+'건</b></div>').join('')+'</div><div class="db-note">안내 확인 완료는 설정·교체 안내를 확인한 결과이며, 문제 해결 확인과 구분합니다.</div>';
+      const popular=bars(m.symptoms.slice(0,5).map(s=>[title(s)+' · '+brandLabel(s.brand),s.clicks]));
+      overview+='<div class="db-grid">'+panel('조치가 어떻게 끝났나요?','진행별 마지막 결과 기준',resultMarkup)+panel('많이 찾는 증상 TOP 5','반복 조회 포함 · 실제 고장 발생 건수와 다릅니다.',popular)+'</div>';
+      const dailyMax=Math.max(...m.daily.map(x=>x.count),1);
+      const trend='<div class="db-trend" role="img" aria-label="선택 기간 중 최근 '+m.daily.length+'일의 클릭수">'+m.daily.map((d,i)=>'<div title="'+d.day+' · '+d.count+'회"><span class="db-trend-num">'+(d.count?num(d.count):'')+'</span><div class="db-trend-space"><span style="height:'+d.count/dailyMax*100+'%"></span></div><small>'+((i%3===0||i===m.daily.length-1)?d.day.slice(5).replace('-','/'):'')+'</small></div>').join('')+'</div>';
+      overview+='<div class="db-grid">'+panel('기간별 이용 추이','최근 '+m.daily.length+'일 · 장비·증상 클릭 기준 · 오늘은 현재까지',trend)+panel('브랜드별 이용','선택 기간의 장비·증상 클릭수',bars(sorted(m.brands).map(([b,n])=>[brandLabel(b),n])))+'</div>';
+      const symptomRows=m.symptoms.map(s=>[symptomCell(s),num(s.clicks),num(s.started),num(s.solved),num(s.escalate),num(s.as),num(s.info),num(s.pending),rate(s.rate),'<button type="button" data-detail="'+esc(s.key)+'">상세</button>']);
+      let symptoms=panel('증상별 이용 · 해결 결과','클릭수는 반복 조회 포함 · 조치 결과는 진행별 마지막 결과 한 건',table(['증상','클릭','시작','해결 확인','채널톡 문의 안내','A/S 안내','안내 확인 완료','진행·미응답','해결 비율','상세'],symptomRows));
+      symptoms+='<div class="db-grid">'+panel('장비별 클릭수','기존 부위·섹터별 활동',bars(sorted(m.devices).map(([k,n])=>{const [b,d]=JSON.parse(k);return [brandLabel(b)+' · '+d,n];})))+panel('해결 확인까지 걸린 시간','실제 작업 시간과 다를 수 있습니다.','<div class="db-time-value">'+duration(m.median)+'</div><p class="db-muted">중앙값 · 1시간 이내 해결 확인 '+num(m.durationCount)+'건 기준</p><div class="db-note">조치 시작부터 해결 응답까지의 시간입니다. 휴대폰을 내려놓은 시간도 포함될 수 있어요.</div>')+'</div>';
+      const legacyRows=m.legacyStats.map(s=>[symptomCell(s),num(s.total),num(s.solved),num(s.escalate),num(s.as),num(s.info),rate(pct(s.solved,s.solved+s.escalate+s.as))]);
+      symptoms+=panel('과거 결과 기록','진행 번호가 없는 이전 기록입니다. 중복 선택이 포함될 수 있으며 위의 조치 수와 합산하지 않습니다.',table(['증상','결과 기록','해결 확인','채널톡 문의 안내','A/S 안내','안내 확인 완료','해결 비율'],legacyRows));
+      const recentList=m.recent.length?m.recent.slice(0,20).map(e=>'<article class="db-message"><div><strong>'+esc(title(e))+'</strong><span class="db-chip">'+labels[e.outcome]+'</span></div><p>'+esc(e.branch_name||'지점 미기록')+' · '+esc(m.people.get(e.user_id)?.display_name||'계정명 없음')+'</p><small>'+stamp(e.end)+'</small></article>').join(''):blank('최근 조치 기록에서 문의·A/S 안내 결과가 없어요.');
+      const feedbackList=m.feedback.length?m.feedback.slice(0,50).map(e=>'<article class="db-message"><div><strong>'+esc(title(e))+'</strong><small>'+stamp(e.time)+'</small></div><p class="db-message-body">'+esc(e.feedback)+'</p><small>'+esc(brandLabel(e.brand)+' · '+(e.device||'장비 미기록')+' · '+(e.branch_name||'지점 미기록'))+'</small></article>').join(''):blank('아직 남겨진 의견이 없어요. 의견이 없다는 것이 불편함이 없다는 뜻은 아닙니다.');
+      const feedback=panel('사용자가 남긴 의견',num(m.feedback.length)+'건 · 최근 50건 표시 · 원문을 확인하고 보완할 내용을 판단하세요.',feedbackList)+panel('최근 채널톡 문의·A/S 안내','새 방식의 조치 기록 · 마지막 결과 기준 최근 20건 · 실제 상담·수리 접수와 다릅니다.','<div class="db-note">CMS로 이동해 문의하기 버튼을 누른 조치: '+num(m.support)+'건 · 실제 채널톡 상담 접수 건수와 다릅니다.</div>'+recentList);
+      const userTable=table(['계정','현재 등록 지점','장비·증상 클릭'],sorted(m.userRows).map(([id,n])=>{const p=m.people.get(id);return [esc(p?.display_name||p?.email||'계정 정보 없음')+(p?.role==='admin'?'<span class="db-sub">관리자</span>':''),esc(p?.branch_name||'미등록'),num(n)];}));
+      const hours=bars(m.hours.map((n,h)=>[String(h).padStart(2,'0')+'시',n]).filter(([,n])=>n>0));
+      const stores= '<div class="db-grid">'+panel('지점별 활동','활동 당시 지점명 기준 · 지점 미기록 클릭 '+num(m.unknownBranch)+'회',bars(sorted(m.branchRows)))+panel('시간대별 이용','한국 시간 · 장비·증상 클릭수',hours)+'</div>'+panel('매장 계정별 활동','선택 기간·브랜드·장비 조건 기준',userTable)+panel('선택 조건에서 활동이 없는 계정','전체 계정 중 현재 필터에 해당하는 활동이 없는 계정입니다. 미사용 사유는 확인되지 않습니다.',m.inactive.length?'<div class="db-chips">'+m.inactive.map(p=>'<span class="db-chip">'+esc(p.display_name||p.email||'이름 없음')+'</span>').join('')+'</div>':blank('선택 조건에서 모든 대상 계정의 이용 기록이 있어요.'));
+      const panes={overview,symptoms,feedback,stores};
+      root.innerHTML='<header class="db-header"><div><span class="db-eyebrow">PHOTOISM HELPER · 운영 현황</span><h1>대시보드</h1><p>이용 흐름을 살펴보고, 다음에 보완할 안내를 찾아보세요.</p></div><div class="db-actions"><button id="cmsApprovalsBtn" type="button">회원 가입 승인</button><button id="accountCreateBtn" type="button">계정 추가</button><button id="csvExportBtn" type="button">기록 내보내기</button></div></header>'+controls+'<p class="db-scope" role="status">'+esc(subtitle)+' · '+num(m.period.length)+'개 활동 기록 · '+stamp(m.now)+' 기준</p>'+summaries+'<div class="db-tabs" role="tablist" aria-label="대시보드 항목">'+[['overview','전체 현황'],['symptoms','증상·조치 결과'],['feedback','의견·보완'],['stores','매장 활동']].map(([id,l])=>'<button type="button" role="tab" id="dbTab-'+id+'" aria-selected="'+(tab===id)+'" aria-controls="dbPane-'+id+'" data-tab="'+id+'">'+l+'</button>').join('')+'</div>'+Object.entries(panes).map(([id,html])=>'<div id="dbPane-'+id+'" role="tabpanel" aria-labelledby="dbTab-'+id+'"'+(id===tab?'':' hidden')+'>'+html+'</div>').join('')+defs+'<div class="db-drawer-host"></div>';
+      const setTab=id=>{if(!panes[id])return;tab=id;root.querySelectorAll('[role=tab]').forEach(b=>b.setAttribute('aria-selected',String(b.dataset.tab===tab)));root.querySelectorAll('[role=tabpanel]').forEach(p=>p.hidden=p.id!=='dbPane-'+tab);root.querySelector('#dbTab-'+tab).focus({preventScroll:true});};
+      root.querySelectorAll('[data-tab]').forEach(b=>{b.onclick=()=>setTab(b.dataset.tab);b.onkeydown=e=>{if(!['ArrowLeft','ArrowRight','Home','End'].includes(e.key))return;e.preventDefault();const ids=Object.keys(panes),i=ids.indexOf(tab);setTab(e.key==='Home'?ids[0]:e.key==='End'?ids.at(-1):ids[(i+(e.key==='ArrowRight'?1:ids.length-1))%ids.length]);};});
+      root.querySelectorAll('[data-tab-link]').forEach(b=>b.onclick=()=>setTab(b.dataset.tabLink));
+      const filter=(id,key)=>{root.querySelector('#'+id).onchange=e=>{options[key]=e.target.value;if(key==='brand')options.device='';chosen=null;draw(id);};};
+      filter('dbPeriod','days');filter('dbBrand','brand');filter('dbDevice','device');filter('dbAudience','audience');
+      root.querySelector('#cmsApprovalsBtn').onclick=actions.approvals;root.querySelector('#accountCreateBtn').onclick=actions.accounts;
+      root.querySelector('#csvExportBtn').onclick=()=>actions.export(m.period,Object.fromEntries(profiles.map(p=>[p.id,p.display_name||p.email||''])));
+      root.querySelectorAll('[data-detail]').forEach(b=>b.onclick=()=>openDetail(m,b.dataset.detail,b));
+      if(focusId)root.querySelector('#'+focusId)?.focus({preventScroll:true});
+    }
+    function openDetail(m,key,trigger){
+      const s=m.symptoms.find(s=>s.key===key);if(!s)return;chosen=key;
+      const relevant=m.feedback.filter(e=>groupKey(e)===key);
+      const dialog=document.createElement('dialog');dialog.className='db-dialog';dialog.setAttribute('aria-labelledby','dbDetailTitle');
+      dialog.innerHTML='<div class="db-dialog-head"><div><span class="db-eyebrow">'+esc(brandLabel(s.brand)+' · '+s.device)+'</span><h2 id="dbDetailTitle">'+esc(title(s))+'</h2></div><button type="button" data-close aria-label="상세 닫기">닫기</button></div><p>조치 시작 '+num(s.started)+'건 · 결과 확인 '+num(s.decided)+'건</p><div class="db-results">'+Object.keys(labels).map(k=>'<div><span>'+labels[k]+'</span><b>'+num(s[k])+'건</b></div>').join('')+'</div><div class="db-note">'+(s.decided<10?'결과가 10건 미만이라 보완 순위에는 포함하지 않습니다.':'채널톡 문의 안내 비율 '+rate(s.contactRate)+'입니다. 사진·설명이 부족하다고 확정하는 수치는 아닙니다.')+' A/S 안내와 미응답은 각각 별도로 해석합니다.</div><h3>이 안내에 남긴 의견</h3>'+(relevant.length?relevant.slice(0,10).map(e=>'<div class="db-message"><p class="db-message-body">'+esc(e.feedback)+'</p><small>'+stamp(e.time)+'</small></div>').join(''):blank('등록된 의견이 없어요.'));
+      root.querySelector('.db-drawer-host').replaceChildren(dialog);dialog.addEventListener('close',()=>{chosen=null;dialog.remove();if(trigger.isConnected)trigger.focus({preventScroll:true});});dialog.querySelector('[data-close]').onclick=()=>dialog.close();dialog.showModal();
+    }
+    draw();
+    return {model:()=>model(events,profiles,options)};
+  }
+  return {model,mount,esc,metadata};
+})();
+
+/* BALANCED DASHBOARD END */
 /* ============================= FLOW LOGIC ============================= */
 
 async function startSymptom(symptomId){
@@ -10109,328 +10268,20 @@ async function renderAdminDashboardScreen(){
 }
 
 function renderAdminDashboardContent(events, profiles){
+  if (!currentUser || currentUser.role !== 'admin' || appState !== 'adminDashboard') return;
   const area = document.getElementById('chatArea');
-  const profileMap = {};
-  const branchMap = {};
-  profiles.forEach(p => {
-    profileMap[p.id] = p.display_name || p.email;
-    branchMap[p.id] = p.branch_name || null;
+  HelperDashboard.mount(area, events, profiles, {
+    label: id => SYMPTOM_LABEL[id] || (typeof editableManual === 'function' ? editableManual(id)?.title : '') || id,
+    approvals: () => { appState='cmsApprovals'; render(); },
+    accounts: () => { appState='accountCreate'; render(); },
+    export: exportEventsToCSV
   });
-
-  const deviceClicks = events.filter(e => e.event_type === 'device_click');
-  const symptomClicks = events.filter(e => e.event_type === 'symptom_click');
-  const outcomes = events.filter(e => e.event_type === 'symptom_outcome');
-
-  const deviceCounts = {};
-  deviceClicks.forEach(e => {
-    const key = e.device || '(알수없음)';
-    deviceCounts[key] = (deviceCounts[key] || 0) + 1;
-  });
-  const deviceRows = Object.entries(deviceCounts).sort((a,b)=>b[1]-a[1]);
-  const maxDeviceCount = deviceRows.length ? deviceRows[0][1] : 1;
-
-  // 증상별 클릭수 (발생 빈도)
-  const symptomClickCounts = {};
-  symptomClicks.forEach(e => {
-    const key = e.symptom_id || '(알수없음)';
-    symptomClickCounts[key] = (symptomClickCounts[key] || 0) + 1;
-  });
-  const symptomClickRows = Object.entries(symptomClickCounts).sort((a,b)=>b[1]-a[1]);
-
-  // 증상별 해결/미해결 통계
-  const symptomStats = {};
-  outcomes.forEach(e => {
-    const key = e.symptom_id || '(알수없음)';
-    if (!symptomStats[key]) symptomStats[key] = { solved:0, escalate:0, as:0, total:0 };
-    symptomStats[key].total++;
-    if (e.outcome === 'solved') symptomStats[key].solved++;
-    else if (e.outcome === 'escalate') symptomStats[key].escalate++;
-    else if (e.outcome === 'as') symptomStats[key].as++;
-  });
-  const symptomRows = Object.entries(symptomStats).sort((a,b)=>b[1].total-a[1].total);
-
-  // 상담·A/S 안내 비율 높은 증상 랭킹 (매뉴얼 보강 필요 신호) — 표본이 너무 적으면 왜곡되니 최소 2건 이상만
-  const worstUnresolvedRows = Object.entries(symptomStats)
-    .filter(([, s]) => s.total >= 2)
-    .map(([sid, s]) => [sid, s, s.total ? Math.round((s.escalate + s.as) / s.total * 100) : 0])
-    .sort((a, b) => b[2] - a[2])
-    .slice(0, 5);
-
-  const userCounts = {};
-  events.forEach(e => {
-    if (!e.user_id) return;
-    userCounts[e.user_id] = (userCounts[e.user_id] || 0) + 1;
-  });
-  const userRows = Object.entries(userCounts).sort((a,b)=>b[1]-a[1]);
-
-  // 활동 없는 직원
-  const inactiveProfiles = profiles.filter(p => !userCounts[p.id]);
-
-  // 브랜드별 비교
-  const brandCounts = { photoism: 0, snapism: 0 };
-  events.forEach(e => {
-    if (e.brand === 'photoism') brandCounts.photoism++;
-    else if (e.brand === 'snapism') brandCounts.snapism++;
-  });
-
-  // 시간대별 발생 패턴 (1시간 단위, 24구간)
-  const timeBuckets = new Array(24).fill(0);
-  events.forEach(e => {
-    const h = new Date(e.created_at).getHours();
-    timeBuckets[h]++;
-  });
-  const timeMax = Math.max(...timeBuckets, 1);
-
-  // 미해결 최근 건 리스트 (채널톡 문의하기/A·S, 최근 10건)
-  const recentUnresolved = outcomes
-    .filter(e => e.outcome === 'escalate' || e.outcome === 'as')
-    .sort((a,b)=> new Date(b.created_at) - new Date(a.created_at))
-    .slice(0, 10);
-
-  // 직원이 남긴 피드백 (최근 10건)
-  const recentFeedback = events
-    .filter(e => e.event_type === 'feedback' && e.feedback)
-    .sort((a,b)=> new Date(b.created_at) - new Date(a.created_at))
-    .slice(0, 10);
-
-  // 평균 해결 소요시간 (증상클릭 → 해결 완료, 같은 사용자+증상 기준으로 가장 가까운 클릭과 매칭)
-  const clicksBySymptomUser = {};
-  symptomClicks.forEach(e => {
-    const key = e.user_id + '|' + e.brand + '|' + e.symptom_id;
-    if (!clicksBySymptomUser[key]) clicksBySymptomUser[key] = [];
-    clicksBySymptomUser[key].push(new Date(e.created_at));
-  });
-  const solvedDurations = [];
-  outcomes.filter(e => e.outcome === 'solved').forEach(e => {
-    const key = e.user_id + '|' + e.brand + '|' + e.symptom_id;
-    const clickTimes = clicksBySymptomUser[key];
-    if (!clickTimes || !clickTimes.length) return;
-    const outcomeTime = new Date(e.created_at);
-    const priorClicks = clickTimes.filter(t => t <= outcomeTime);
-    if (!priorClicks.length) return;
-    const nearestClick = new Date(Math.max(...priorClicks.map(t=>t.getTime())));
-    const diffMs = outcomeTime - nearestClick;
-    if (diffMs >= 0 && diffMs < 1000*60*60) { solvedDurations.push(diffMs); } // 1시간 이내만 유효 데이터로 간주
-  });
-  const avgDurationMs = solvedDurations.length ? solvedDurations.reduce((a,b)=>a+b,0)/solvedDurations.length : null;
-  function formatDuration(ms){
-    if (ms === null) return '-';
-    const totalSec = Math.round(ms/1000);
-    const min = Math.floor(totalSec/60);
-    const sec = totalSec%60;
-    return min > 0 ? min+'분 '+sec+'초' : sec+'초';
-  }
-
-  // 전체 해결률 / 상담·A/S 안내 비율
-  const totalOutcomes = outcomes.length;
-  const totalSolved = outcomes.filter(e=>e.outcome==='solved').length;
-  const totalUnresolved = totalOutcomes - totalSolved;
-  const overallSolvedRate = totalOutcomes ? Math.round(totalSolved/totalOutcomes*100) : 0;
-  const overallUnresolvedRate = totalOutcomes ? 100 - overallSolvedRate : 0;
-
-  // 이번주 vs 지난주 (월요일 시작 기준)
-  function getWeekStart(d){
-    const date = new Date(d);
-    const day = date.getDay();
-    const diff = (day === 0 ? -6 : 1) - day;
-    date.setDate(date.getDate() + diff);
-    date.setHours(0,0,0,0);
-    return date;
-  }
-  const now = new Date();
-  const thisWeekStart = getWeekStart(now);
-  const lastWeekStart = new Date(thisWeekStart); lastWeekStart.setDate(lastWeekStart.getDate() - 7);
-  const thisWeekCount = events.filter(e => new Date(e.created_at) >= thisWeekStart).length;
-  const lastWeekCount = events.filter(e => { const t = new Date(e.created_at); return t >= lastWeekStart && t < thisWeekStart; }).length;
-  const weekMax = Math.max(thisWeekCount, lastWeekCount, 1);
-  let trendText, trendClass;
-  if (lastWeekCount === 0) {
-    trendText = thisWeekCount > 0 ? '신규' : '-';
-    trendClass = '';
-  } else {
-    const pct = Math.round((thisWeekCount - lastWeekCount) / lastWeekCount * 100);
-    trendText = (pct >= 0 ? '▲ +' : '▼ ') + pct + '%';
-    trendClass = pct >= 0 ? 'admin-rate-good' : 'admin-rate-bad';
-  }
-
-  const summaryHtml =
-    '<div class="admin-summary">' +
-      '<div class="admin-summary-card"><div class="num">'+events.length+'</div><div class="label">전체 기록</div></div>' +
-      '<div class="admin-summary-card"><div class="num">'+profiles.length+'</div><div class="label">가입 계정</div></div>' +
-      '<div class="admin-summary-card"><div class="num admin-rate-good">'+overallSolvedRate+'%</div><div class="label">전체 해결 완료율</div></div>' +
-      '<div class="admin-summary-card"><div class="num admin-rate-bad">'+overallUnresolvedRate+'%</div><div class="label">전체 상담·A/S 안내 비율</div></div>' +
-      '<div class="admin-summary-card"><div class="num">'+formatDuration(avgDurationMs)+'</div><div class="label">평균 해결 소요시간</div></div>' +
-    '</div>';
-
-  // Top 5 증상 랭킹
-  const medals = ['🥇','🥈','🥉','4위','5위'];
-  const top5 = symptomClickRows.slice(0,5);
-  const top5Html = top5.length ?
-    '<table class="admin-table"><thead><tr><th></th><th>증상</th><th>클릭수</th></tr></thead><tbody>' +
-    top5.map(([sid, count], i) => {
-      const label = (typeof SYMPTOM_LABEL !== 'undefined' && SYMPTOM_LABEL[sid]) ? SYMPTOM_LABEL[sid] : '';
-      return '<tr><td style="font-size:15px;">'+medals[i]+'</td><td>'+sid+(label ? ' <span style="color:var(--muted); font-size:11.5px;">'+escapeHtml(label)+'</span>' : '')+'</td><td>'+count+'</td></tr>';
-    }).join('') + '</tbody></table>'
-    : '<div class="admin-empty">아직 기록이 없어요.</div>';
-
-  // 상담·A/S 안내 비율 높은 증상 랭킹 (매뉴얼 보강 필요 신호)
-  const worstUnresolvedHtml = worstUnresolvedRows.length ?
-    '<table class="admin-table"><thead><tr><th></th><th>증상</th><th>상담·A/S 안내 비율</th><th>채널톡 문의하기</th><th>A/S</th><th>총 건수</th></tr></thead><tbody>' +
-    worstUnresolvedRows.map(([sid, s, rate], i) => {
-      const label = (typeof SYMPTOM_LABEL !== 'undefined' && SYMPTOM_LABEL[sid]) ? SYMPTOM_LABEL[sid] : '';
-      const rateClass = rate >= 60 ? 'admin-rate-bad' : (rate < 30 ? 'admin-rate-good' : '');
-      return '<tr><td style="font-size:15px;">'+(i+1)+'</td><td>'+sid+(label ? ' <span style="color:var(--muted); font-size:11.5px;">'+escapeHtml(label)+'</span>' : '')+'</td>' +
-        '<td class="'+rateClass+'">'+rate+'%</td><td>'+s.escalate+'</td><td>'+s.as+'</td><td>'+s.total+'</td></tr>';
-    }).join('') + '</tbody></table>'
-    : '<div class="admin-empty">아직 판단할 만한 기록(증상당 2건 이상)이 부족해요.</div>';
-
-  // 기간별 추이
-  const trendHtml =
-    '<div style="display:flex; align-items:flex-end; gap:24px; padding:10px 4px 4px;">' +
-      '<div style="text-align:center;">' +
-        '<div style="height:70px; display:flex; align-items:flex-end;"><div style="width:44px; background:var(--border); border-radius:6px 6px 0 0; height:'+Math.max(6,Math.round(lastWeekCount/weekMax*70))+'px;"></div></div>' +
-        '<div style="font-size:12px; color:var(--muted); margin-top:6px;">지난주</div>' +
-        '<div style="font-size:14px; font-weight:700;">'+lastWeekCount+'</div>' +
-      '</div>' +
-      '<div style="text-align:center;">' +
-        '<div style="height:70px; display:flex; align-items:flex-end;"><div style="width:44px; background:var(--accent); border-radius:6px 6px 0 0; height:'+Math.max(6,Math.round(thisWeekCount/weekMax*70))+'px;"></div></div>' +
-        '<div style="font-size:12px; color:var(--muted); margin-top:6px;">이번주</div>' +
-        '<div style="font-size:14px; font-weight:700;">'+thisWeekCount+'</div>' +
-      '</div>' +
-      '<div style="align-self:center; font-size:16px;" class="'+trendClass+'">'+trendText+'</div>' +
-    '</div>';
-
-  const deviceTableHtml = deviceRows.length ?
-    '<table class="admin-table"><thead><tr><th>부위/섹터</th><th>클릭수</th></tr></thead><tbody>' +
-    deviceRows.map(([name, count]) =>
-      '<tr><td>'+name+'</td><td><span class="admin-bar" style="width:'+Math.max(6, Math.round(count/maxDeviceCount*80))+'px;"></span>'+count+'</td></tr>'
-    ).join('') + '</tbody></table>'
-    : '<div class="admin-empty">아직 기록이 없어요.</div>';
-
-  const symptomTableHtml = symptomRows.length ?
-    '<table class="admin-table"><thead><tr><th>증상</th><th>클릭수</th><th>총 조치건수</th><th>해결</th><th>미해결(담당자·A/S)</th><th>해결률</th><th>상담·A/S 안내 비율</th></tr></thead><tbody>' +
-    symptomRows.map(([sid, s]) => {
-      const rate = s.total ? Math.round(s.solved / s.total * 100) : 0;
-      const unresolvedRate = s.total ? 100 - rate : 0;
-      const label = (typeof SYMPTOM_LABEL !== 'undefined' && SYMPTOM_LABEL[sid]) ? SYMPTOM_LABEL[sid] : '';
-      const rateClass = rate >= 60 ? 'admin-rate-good' : (rate < 30 ? 'admin-rate-bad' : '');
-      const unresolvedClass = unresolvedRate >= 60 ? 'admin-rate-bad' : (unresolvedRate < 30 ? 'admin-rate-good' : '');
-      return '<tr><td>'+sid+(label ? ' <span style="color:var(--muted); font-size:11.5px;">'+escapeHtml(label)+'</span>' : '')+'</td>' +
-        '<td>'+(symptomClickCounts[sid]||0)+'</td>' +
-        '<td>'+s.total+'</td><td>'+s.solved+'</td><td>'+(s.escalate+s.as)+'</td>' +
-        '<td class="'+rateClass+'">'+rate+'%</td><td class="'+unresolvedClass+'">'+unresolvedRate+'%</td></tr>';
-    }).join('') + '</tbody></table>'
-    : '<div class="admin-empty">아직 해결 결과 기록이 없어요.</div>';
-
-  const userTableHtml = userRows.length ?
-    '<table class="admin-table"><thead><tr><th>직원</th><th>지점</th><th>전체 클릭수</th></tr></thead><tbody>' +
-    userRows.map(([uid, count]) =>
-      '<tr><td>'+escapeHtml(profileMap[uid] || '(알수없음)')+'</td><td>'+escapeHtml(branchMap[uid] || '-')+'</td><td>'+count+'</td></tr>'
-    ).join('') + '</tbody></table>'
-    : '<div class="admin-empty">아직 기록이 없어요.</div>';
-
-  // 지점별 활동
-  const branchCounts = Object.create(null);
-  events.forEach(e => {
-    if (!e.user_id) return;
-    const branch = e.branch_name || branchMap[e.user_id];
-    if (!branch) return;
-    branchCounts[branch] = (branchCounts[branch] || 0) + 1;
-  });
-  const branchRows = Object.entries(branchCounts).sort((a,b)=>b[1]-a[1]);
-  const maxBranchCount = branchRows.length ? branchRows[0][1] : 1;
-  const branchTableHtml = branchRows.length ?
-    '<table class="admin-table"><thead><tr><th>지점</th><th>전체 클릭수</th></tr></thead><tbody>' +
-    branchRows.map(([name, count]) =>
-      '<tr><td>'+escapeHtml(name)+'</td><td><span class="admin-bar" style="width:'+Math.max(6, Math.round(count/maxBranchCount*80))+'px;"></span>'+count+'</td></tr>'
-    ).join('') + '</tbody></table>'
-    : '<div class="admin-empty">지점명을 입력한 직원의 기록이 아직 없어요.</div>';
-
-  // 브랜드별 비교
-  const brandHtml =
-    '<div class="admin-brand-compare">' +
-      '<div class="admin-brand-card"><div class="num">'+brandCounts.photoism+'</div><div class="label">포토이즘</div></div>' +
-      '<div class="admin-brand-card"><div class="num">'+brandCounts.snapism+'</div><div class="label">스내피즘</div></div>' +
-    '</div>';
-
-  // 시간대별 발생 패턴
-  const timeHtml =
-    '<div style="display:flex; align-items:flex-end; gap:4px; padding:10px 4px 4px; overflow-x:auto;">' +
-    timeBuckets.map((count, h) =>
-      '<div style="text-align:center; flex:1; min-width:12px;" title="'+h+'시: '+count+'건">' +
-        '<div style="height:70px; display:flex; align-items:flex-end; justify-content:center;"><div style="width:100%; max-width:16px; background:var(--accent); border-radius:3px 3px 0 0; height:'+Math.max(3,Math.round(count/timeMax*70))+'px;"></div></div>' +
-        '<div style="font-size:9.5px; color:var(--muted); margin-top:5px;">'+(h % 3 === 0 ? h+'시' : '')+'</div>' +
-      '</div>'
-    ).join('') +
-    '</div>';
-
-  // 미해결 최근 건 리스트
-  const recentUnresolvedHtml = recentUnresolved.length ?
-    recentUnresolved.map(e => {
-      const label = (typeof SYMPTOM_LABEL !== 'undefined' && SYMPTOM_LABEL[e.symptom_id]) ? SYMPTOM_LABEL[e.symptom_id] : (e.symptom_id||'');
-      const tagClass = e.outcome === 'as' ? 'as' : 'escalate';
-      const tagText = e.outcome === 'as' ? 'A/S 필요' : '채널톡 문의하기';
-      const when = new Date(e.created_at).toLocaleString('ko-KR', {month:'numeric', day:'numeric', hour:'2-digit', minute:'2-digit'});
-      return '<div class="admin-recent-item">' +
-        '<div><b>'+escapeHtml(profileMap[e.user_id] || '(알수없음)')+'</b> · '+(e.device||'')+' · '+escapeHtml(label)+'<div style="color:var(--muted); font-size:11.5px;">'+when+'</div></div>' +
-        '<span class="admin-recent-tag '+tagClass+'">'+tagText+'</span>' +
-      '</div>';
-    }).join('')
-    : '<div class="admin-empty">최근 상담·A/S 안내 기록이 없어요.</div>';
-
-  // 직원이 남긴 피드백
-  const feedbackListHtml = recentFeedback.length ?
-    recentFeedback.map(e => {
-      const label = (typeof SYMPTOM_LABEL !== 'undefined' && SYMPTOM_LABEL[e.symptom_id]) ? SYMPTOM_LABEL[e.symptom_id] : (e.symptom_id||'');
-      const when = new Date(e.created_at).toLocaleString('ko-KR', {month:'numeric', day:'numeric', hour:'2-digit', minute:'2-digit'});
-      return '<div class="admin-recent-item" style="display:block;">' +
-        '<div style="color:var(--muted); font-size:11.5px; margin-bottom:4px;">'+escapeHtml(profileMap[e.user_id] || '(알수없음)')+' · '+(e.device||'')+' · '+escapeHtml(label)+' · '+when+'</div>' +
-        '<div>'+escapeHtml(e.feedback)+'</div>' +
-      '</div>';
-    }).join('')
-    : '<div class="admin-empty">아직 남겨진 의견이 없어요.</div>';
-
-  // 활동 없는 직원
-  const inactiveHtml = inactiveProfiles.length ?
-    inactiveProfiles.map(p => '<span class="admin-inactive-chip">'+escapeHtml(p.display_name || p.email)+'</span>').join('')
-    : '<div class="admin-empty">모든 매장 계정이 한 번 이상 사용했어요.</div>';
-
-  area.innerHTML =
-    '<div class="admin-screen">' +
-      '<div style="display:flex; justify-content:space-between; align-items:flex-start; flex-wrap:wrap; gap:10px;">' +
-        '<div><div class="hub-title">📊 관리자 대시보드</div><div class="hub-sub">전체 사용 현황을 확인할 수 있어요.</div></div>' +
-        '<button class="admin-export-btn" id="cmsApprovalsBtn">회원 가입 승인</button>' +
-        '<button class="admin-export-btn" id="accountCreateBtn">계정 추가</button>' +
-        '<button class="admin-export-btn" id="csvExportBtn">⬇ CSV로 내보내기</button>' +
-      '</div>' +
-
-      '<p class="helper-small">과거 기록은 조치별 중복을 식별할 수 없어 이벤트 기준으로 표시합니다.</p>' +
-      '<div class="admin-section-title">📈 기간별 활동량 추이 (이번주 vs 지난주)</div>' + trendHtml +
-      '<div class="admin-section-title">🏬 브랜드별 비교</div>' + brandHtml +
-      '<div class="admin-section-title">🕐 시간대별 발생 패턴</div>' + timeHtml +
-      '<div class="admin-section-title">🏆 자주 발생하는 증상 Top 5</div>' + top5Html +
-      '<div class="admin-section-title">🚩 매뉴얼 보강이 필요해 보이는 증상 (상담·A/S 안내 비율 높은 순)</div>' + worstUnresolvedHtml +
-      '<div class="admin-section-title">🩺 증상별 클릭수 · 해결률 · 상담·A/S 안내 비율</div>' + symptomTableHtml +
-      '<div class="admin-section-title">📍 부위/섹터별 클릭수</div>' + deviceTableHtml +
-      '<div class="admin-section-title">⏳ 최근 상담·A/S 안내 기록</div>' +
-      '<div style="background:rgba(var(--glass-rgb),.7); border:1px solid var(--border); border-radius:12px; overflow:hidden;">' + recentUnresolvedHtml + '</div>' +
-      '<div class="admin-section-title">💬 매장 계정이 남긴 의견</div>' +
-      '<div style="background:rgba(var(--glass-rgb),.7); border:1px solid var(--border); border-radius:12px; overflow:hidden;">' + feedbackListHtml + '</div>' +
-      '<div class="admin-section-title">🏢 지점별 활동</div>' + branchTableHtml +
-      '<div class="admin-section-title">👤 매장 계정별 활동</div>' + userTableHtml +
-      '<div class="admin-section-title">💤 활동 없는 매장 계정</div><div>' + inactiveHtml + '</div>' +
-    '</div>';
-  helperRenderPerformance(events,profiles);
-
-  document.getElementById('cmsApprovalsBtn').onclick=()=>{appState='cmsApprovals';render();};
-  document.getElementById('accountCreateBtn').onclick=()=>{appState='accountCreate';render();};
-  document.getElementById('csvExportBtn').onclick = ()=> exportEventsToCSV(events, profileMap);
 }
 
 function exportEventsToCSV(events, profileMap){
   const headers = ['일시','직원','종류','브랜드','기기','증상ID','결과','의견'];
   const typeLabel = { device_click:'부위클릭', symptom_click:'증상클릭', symptom_outcome:'결과', feedback:'의견' };
-  const outcomeLabel = { solved:'해결', escalate:'채널톡 문의하기', as:'A/S필요' };
+  const outcomeLabel = { solved:'해결 확인', escalate:'채널톡 문의 안내', as:'A/S 안내', info:'안내 확인 완료' };
   const rows = events.map(e => [
     new Date(e.created_at).toLocaleString('ko-KR'),
     profileMap[e.user_id] || '',

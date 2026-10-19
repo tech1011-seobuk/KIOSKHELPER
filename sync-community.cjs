@@ -33,4 +33,15 @@ const searchCssStart='/* GUIDE SEARCH CSS START */',searchCssEnd='/* GUIDE SEARC
 const searchCss=searchCssStart+'\n'+fs.readFileSync(path.join(root,'guide-search.css'),'utf8')+'\n'+searchCssEnd;
 if(html.includes(searchCssStart))html=html.slice(0,html.indexOf(searchCssStart))+searchCss+html.slice(html.indexOf(searchCssEnd)+searchCssEnd.length);
 else html=html.replace('</style>',searchCss+'\n</style>');
+
+// Keep the dashboard source and its generated inline copy together.
+for(const [name,start,end,anchor] of [
+ ['dashboard.js','/* BALANCED DASHBOARD START */','/* BALANCED DASHBOARD END */','/* ============================= FLOW LOGIC ============================= */'],
+ ['dashboard.css','/* BALANCED DASHBOARD CSS START */','/* BALANCED DASHBOARD CSS END */','</style>']
+]){
+ const source=start+'\n'+fs.readFileSync(path.join(root,name),'utf8')+'\n'+end;
+ if(html.includes(start))html=html.slice(0,html.indexOf(start))+source+html.slice(html.indexOf(end)+end.length);
+ else {if(!html.includes(anchor))throw Error('Dashboard integration anchor missing');html=html.replace(anchor,source+'\n'+anchor);}
+}
+
 fs.writeFileSync(file,html);

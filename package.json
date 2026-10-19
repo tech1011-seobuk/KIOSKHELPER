@@ -3,7 +3,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "test": "node --test regression.test.mjs staging-ui-regression.test.mjs staging-diagnosis.test.mjs cms-mapping.test.mjs cms-membership.test.mjs snapism.test.mjs manual-review.test.mjs ending-guides.test.mjs community.test.mjs guide-search.test.mjs step-review.test.mjs editable-manuals.test.mjs production-contract.test.mjs",
+    "test": "node --test regression.test.mjs staging-ui-regression.test.mjs staging-diagnosis.test.mjs cms-mapping.test.mjs cms-membership.test.mjs snapism.test.mjs manual-review.test.mjs ending-guides.test.mjs community.test.mjs guide-search.test.mjs step-review.test.mjs editable-manuals.test.mjs production-contract.test.mjs dashboard.test.mjs",
     "build:cms": "node build-cms.cjs",
     "build": "node sync-community.cjs && node build-3d.cjs"
   },
