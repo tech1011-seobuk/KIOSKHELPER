@@ -9,6 +9,15 @@
 
 # Production maintenance · 2026-10-16
 
+## 2026-10-19 production authentication restoration
+
+- User scope clarification: promoting staging means troubleshooting guide content (including edited/deleted photos and text), not copying the whole staging application. Preserve production identity, CMS membership, approvals, store selection, managed/viewing accounts, analytics exclusions and access boundaries.
+- The staging-copy release e1965b8 regressed production-specific frontend code. Restore those parts from pre-release production source 45ccea2 while retaining the latest 104 published guides, editable-guide routing, search, kiosk models and camera replacement improvements. This repair makes no database, account, secret, membership or guide-data writes.
+- Restore the first-step greeting and original production inline-video presentation. Viewing accounts remain guidance-only and excluded from usage events.
+- Both production deployment workflows now deploy the current production branch and run CMS plus production-contract regression tests. Neither workflow checks out or transforms staging. The old prepare-production.mjs wholesale copier is retired.
+- Local verification: 150 tests passed, including CMS mapping, signup/approval/session gates, managed login, store selection, event attribution, first-step greeting, service-worker recovery, latest editable guides and workflow safeguards. Browser checks cover CMS login/signup and the administrator entry; do not claim a new real-user login was tested without completing it.
+- Guide-content promotions must use the revision-guarded data process and preserve production-specific frontend code. Never use a full staging checkout as the production application.
+
 - Production: KIOSKHELPER / Supabase lsetixbyarexggxsihen. Staging: kioskhelper-staging / mjzhljlhjsbnnxyekmwy. Keep credentials, cache names, queues and data isolated.
 - Latest staging kiosk UI sources are promoted from e13c0d2689a2469a7f749d73a32085cc47ac698b. Production keeps CMS signup/approval, store selection, administrator login, greeting and inline videos.
 - The single 계정 추가 action issues guidance-only viewing accounts. It does not grant administrator privileges or require CMS membership. Existing administrators remain administrators. Legacy company account helperadmin01 was converted to viewing-only with its existing password preserved.
