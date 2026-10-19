@@ -50,7 +50,8 @@ function buildGuideSearchIndex(){
  for(const [key,guides]of Object.entries(REPLACEMENT_GUIDES))for(const [variant,guide]of guides.entries()){
   const [device,model]=key.split(':'),camera=CAMERA_MODELS.find(m=>m.id===model),printer=PRINTER_MODELS.find(m=>m.id===model);
   const name=camera?.sub||printer?.label||guide.label||device;
-  add({id:'replace:'+key+':'+variant,brand:'photoism',device,code:'',title:name+(name.includes('교체')?'':' 교체'),kind:'교체 방법',body:typeof editableManualBody==='function'?editableManualBody('replace:'+key+':'+variant,[guide.preparation,guide.after,...guide.steps.flat()].filter(Boolean).join(' ')):[guide.preparation,guide.after,...guide.steps.flat()].filter(Boolean).join(' '),route:'replace',key,model,variant});
+  const searchDevice=replacementSelection(key,variant).title||device;
+  add({id:'replace:'+key+':'+variant,brand:'photoism',device:searchDevice,code:'',title:name+(name.includes('교체')?'':' 교체'),kind:'교체 방법',body:typeof editableManualBody==='function'?editableManualBody('replace:'+key+':'+variant,[guide.preparation,guide.after,...guide.steps.flat()].filter(Boolean).join(' ')):[guide.preparation,guide.after,...guide.steps.flat()].filter(Boolean).join(' '),route:'replace',key,model,variant});
  }
  for(const model of CAMERA_MODELS)for(const action of ['basic','color'])add({id:'camera:'+model.id+':'+action,brand:'photoism',device:'카메라',code:'',title:model.sub+' '+(action==='basic'?'기본 설정':'색감 조정'),kind:'설정 방법',body:typeof editableManualBody==='function'?editableManualBody('camera:'+model.id+':'+action,action==='basic'?'카메라 기본세팅 설정':'화이트밸런스 색감 밝기 조정 세팅'):(action==='basic'?'카메라 기본세팅 설정':'화이트밸런스 색감 밝기 조정 세팅'),route:'camera',model:model.id,action});
  return entries;
@@ -73,7 +74,8 @@ function updateGuideSearchEntry(){
 }
 async function openGuideSearchResult(entry){
  if(!currentUser)return;
- symptomSource=entry.brand;selectedDevice=entry.device;
+ symptomSource=entry.brand;selectedDevicePart=entry.device;
+ selectedDevice=entry.brand==='photoism'?(HOTSPOT_DEVICE_MAP[entry.device]||entry.device):entry.device;
  if(entry.route==='symptom'){await startSymptom(entry.sid);return;}
  path=[];if(typeof helperAttempt!=='undefined')helperAttempt=null;
  if(entry.route==='snap'){

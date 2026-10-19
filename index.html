@@ -6221,7 +6221,8 @@ const EQUIP_REPLACE_DEVICES = [
   {name:'PC', icon:'💻'},
   {name:'카드리더기', icon:'💳'},
   {name:'지폐투입기', icon:'💵'},
-  {name:'리모컨 / 서비스코인 / 설정', icon:'🎮'}
+  {name:'리모컨', icon:'🎮'},
+  {name:'서비스코인 / 설정', icon:'🪙'}
 ];
 
 function mkInternetTree(){
@@ -7186,7 +7187,8 @@ function buildGuideSearchIndex(){
  for(const [key,guides]of Object.entries(REPLACEMENT_GUIDES))for(const [variant,guide]of guides.entries()){
   const [device,model]=key.split(':'),camera=CAMERA_MODELS.find(m=>m.id===model),printer=PRINTER_MODELS.find(m=>m.id===model);
   const name=camera?.sub||printer?.label||guide.label||device;
-  add({id:'replace:'+key+':'+variant,brand:'photoism',device,code:'',title:name+(name.includes('교체')?'':' 교체'),kind:'교체 방법',body:typeof editableManualBody==='function'?editableManualBody('replace:'+key+':'+variant,[guide.preparation,guide.after,...guide.steps.flat()].filter(Boolean).join(' ')):[guide.preparation,guide.after,...guide.steps.flat()].filter(Boolean).join(' '),route:'replace',key,model,variant});
+  const searchDevice=replacementSelection(key,variant).title||device;
+  add({id:'replace:'+key+':'+variant,brand:'photoism',device:searchDevice,code:'',title:name+(name.includes('교체')?'':' 교체'),kind:'교체 방법',body:typeof editableManualBody==='function'?editableManualBody('replace:'+key+':'+variant,[guide.preparation,guide.after,...guide.steps.flat()].filter(Boolean).join(' ')):[guide.preparation,guide.after,...guide.steps.flat()].filter(Boolean).join(' '),route:'replace',key,model,variant});
  }
  for(const model of CAMERA_MODELS)for(const action of ['basic','color'])add({id:'camera:'+model.id+':'+action,brand:'photoism',device:'카메라',code:'',title:model.sub+' '+(action==='basic'?'기본 설정':'색감 조정'),kind:'설정 방법',body:typeof editableManualBody==='function'?editableManualBody('camera:'+model.id+':'+action,action==='basic'?'카메라 기본세팅 설정':'화이트밸런스 색감 밝기 조정 세팅'):(action==='basic'?'카메라 기본세팅 설정':'화이트밸런스 색감 밝기 조정 세팅'),route:'camera',model:model.id,action});
  return entries;
@@ -7209,7 +7211,8 @@ function updateGuideSearchEntry(){
 }
 async function openGuideSearchResult(entry){
  if(!currentUser)return;
- symptomSource=entry.brand;selectedDevice=entry.device;
+ symptomSource=entry.brand;selectedDevicePart=entry.device;
+ selectedDevice=entry.brand==='photoism'?(HOTSPOT_DEVICE_MAP[entry.device]||entry.device):entry.device;
  if(entry.route==='symptom'){await startSymptom(entry.sid);return;}
  path=[];if(typeof helperAttempt!=='undefined')helperAttempt=null;
  if(entry.route==='snap'){
@@ -7941,6 +7944,7 @@ const WELCOME_HTML = `<div class="empty-state">
 
 let appState = 'hub';
 let selectedDevice = null;
+let selectedDevicePart = null;
 let selectedCameraModel = null;
 let selectedColorSection = null;
 let cameraBasicStepIndex = 1;
@@ -7950,6 +7954,7 @@ const HOTSPOT_DEVICE_MAP = {
   '지폐투입기':'지폐투입기', '카드리더기':'카드리더기', '프린터':'프린터',
   '리모컨':'리모컨 / 서비스코인 / 설정',
   '설정':'리모컨 / 서비스코인 / 설정',
+  '서비스코인 / 설정':'리모컨 / 서비스코인 / 설정',
   '서비스코인':'리모컨 / 서비스코인 / 설정',
   'PC':'PC', 'CMS':'CMS'
 };
@@ -8412,6 +8417,7 @@ function selectDeviceFromPicker(rawName){
   const mapped = HOTSPOT_DEVICE_MAP[rawName] || rawName;
   
   selectedDevice = mapped;
+  selectedDevicePart = rawName;
   symptomSource = 'photoism';
   logEvent('device_click', { brand: 'photoism', device: mapped });
 
@@ -8430,7 +8436,7 @@ function getDeviceActions(deviceName){
     actions.push({id:'bodyReplace', icon:'🔄', title:'카메라 교체', desc:'기종을 고른 뒤 카메라 바디를 안전하게 교체하는 방법을 안내해드려요.'});
     actions.push({id:'color', icon:'🎨', title:'색감 조정', desc:'기종을 고른 뒤 포토이즘 색감에 맞게 화이트밸런스·톤을 조정하는 방법을 안내해드려요.'});
   }
-  if (deviceName !== '카메라' && EQUIP_REPLACE_DEVICES.some(d => d.name === deviceName)) {
+  if (deviceName !== '카메라' && (deviceName === '리모컨 / 서비스코인 / 설정' || EQUIP_REPLACE_DEVICES.some(d => d.name === deviceName))) {
     actions.push({id:'replace', icon:'🔄', title:'교체 방법', desc:'부품·장비를 새 것으로 교체하는 방법을 안내해드려요.'});
   }
   return actions;
@@ -8440,9 +8446,10 @@ function renderDeviceActionsScreen(){
   const area = document.getElementById('chatArea');
   const dev = DEVICES.find(d => d.name === selectedDevice);
   const actions = getDeviceActions(selectedDevice);
+  const deviceTitle = selectedDevice === '리모컨 / 서비스코인 / 설정' ? replacementSelection(selectedDevicePart || selectedDevice).title : selectedDevice;
   const wrap = document.createElement('div');
   wrap.className = 'hub-screen';
-  wrap.innerHTML = '<div class="hub-title">'+(dev ? dev.icon+' ' : '')+selectedDevice+'</div>' +
+  wrap.innerHTML = '<div class="hub-title">'+(dev ? dev.icon+' ' : '')+deviceTitle+'</div>' +
     '<div class="hub-sub">무엇을 도와드릴까요?</div>' +
     '<div class="tool-card-grid">' +
     actions.map(a =>
@@ -8455,7 +8462,7 @@ function renderDeviceActionsScreen(){
     '</div>';
   area.innerHTML = '';
   area.appendChild(wrap);
-  document.getElementById('breadcrumb').innerHTML = selectedDevice;
+  document.getElementById('breadcrumb').textContent = deviceTitle;
   area.querySelectorAll('.tool-card[data-action]').forEach(btn=>{
     btn.onclick = (e)=>{
       addRipple(e.currentTarget, e); 
@@ -8463,7 +8470,7 @@ function renderDeviceActionsScreen(){
       if (action === 'repair') { appState = 'symptoms'; render(); }
       else if (action === 'color') { pendingCameraAction = 'color'; goToColorModel(); }
       else if (action === 'bodyReplace') { pendingCameraAction = 'bodyReplace'; goToColorModel(); }
-      else if (action === 'replace') { if(selectedDevice === '프린터'){goToPrinterModel('deviceActions');return;} selectedEquipReplaceDevice = selectedDevice; appState = 'equipReplaceDetail'; logEvent('device_click', { brand:'photoism', device:selectedDevice, detail:'교체 방법' }); render(); }
+      else if (action === 'replace') { if(selectedDevice === '프린터'){goToPrinterModel('deviceActions');return;} selectedEquipReplaceDevice = deviceTitle; appState = 'equipReplaceDetail'; logEvent('device_click', { brand:'photoism', device:deviceTitle, detail:'교체 방법' }); render(); }
     };
   });
   add3DTilt(area, '.tool-card', 4);
@@ -8946,7 +8953,8 @@ async function loadRecentSymptoms(brand){
         const item = recent[parseInt(chip.dataset.idx,10)];
         const brand = item.brand === 'snapism' ? 'snapism' : 'photoism';
         symptomSource = brand;
-        selectedDevice = item.device || null;
+        selectedDevicePart = item.device || null;
+        selectedDevice = brand === 'photoism' ? (HOTSPOT_DEVICE_MAP[item.device] || item.device || null) : (item.device || null);
 
         if (item.event_type === 'symptom_click') {
           startSymptom(item.symptom_id);
@@ -10405,7 +10413,7 @@ function renderEquipReplaceScreen(){
   area.appendChild(wrap);
   document.getElementById('breadcrumb').innerHTML = '장비 교체 방법';
   area.querySelectorAll('.tool-card[data-equip]').forEach(btn=>{
-    btn.onclick = (e)=>{ addRipple(e.currentTarget, e); if(btn.dataset.equip === '프린터'){goToPrinterModel('equipReplace');return;} selectedEquipReplaceDevice = btn.dataset.equip; appState='equipReplaceDetail'; render(); };
+    btn.onclick = (e)=>{ addRipple(e.currentTarget, e); if(btn.dataset.equip === '프린터'){goToPrinterModel('equipReplace');return;} selectedEquipReplaceDevice = selectedDevicePart = btn.dataset.equip; selectedDevice = HOTSPOT_DEVICE_MAP[btn.dataset.equip] || btn.dataset.equip; appState='equipReplaceDetail'; render(); };
   });
   add3DTilt(area, '.tool-card', 4);
 }
@@ -10818,6 +10826,15 @@ const REPLACEMENT_GUIDES = {
     }
   ]
 };
+// Keep the saved shared manual keys and variant numbers, but expose separate parts.
+function replacementSelection(device,variant=0){
+ const key='리모컨 / 서비스코인 / 설정';
+ if(device===key||['리모컨','서비스코인','설정','서비스코인 / 설정'].includes(device)){
+  const selected=device===key?(Number(variant)===1?1:0):(device==='리모컨'?0:1);
+  return {key,variant:selected,title:selected===0?'리모컨':'서비스코인 / 설정',isolated:true};
+ }
+ return {key:device,variant,title:null,isolated:false};
+}
 function replacementCards(guide){
  const cards=[];
  if(guide.preparation)cards.push({label:'시작 전 확인',title:'준비물 · 유의사항',body:guide.preparation});
@@ -10825,13 +10842,13 @@ function replacementCards(guide){
  if(guide.after)cards.push({label:'교체 후 확인',title:guide.afterTitle||'본사 세팅 요청',body:guide.after});
  return cards;
 }
-function appendReplacementGuide(host,key,initialVariant=0){
+function appendReplacementGuide(host,key,initialVariant=0,{onlyVariant=false}={}){
  const guides=REPLACEMENT_GUIDES[key]||[];
  if(!guides.length){const note=document.createElement('p');note.textContent='교체 안내를 준비 중이에요.';host.appendChild(note);appendReplacementMedia(host,key);return;}
  const section=document.createElement('section');section.className='replacement-guide';host.appendChild(section);
  let variant=Math.max(0,Math.min(guides.length-1,Number(initialVariant)||0)),page=0,mediaVariant=-1;
  const choices=document.createElement('div');choices.className='replacement-choices';
- if(guides.length>1){const label=document.createElement('p');label.textContent='교체할 종류를 선택해 주세요.';section.appendChild(label);section.appendChild(choices);}
+ if(guides.length>1&&!onlyVariant){const label=document.createElement('p');label.textContent='교체할 종류를 선택해 주세요.';section.appendChild(label);section.appendChild(choices);}
  const media=document.createElement('div');section.appendChild(media);
  const stage=document.createElement('div');section.appendChild(stage);
  const cameraModel=key.startsWith('카메라:')?key.split(':')[1]:null;
@@ -10839,7 +10856,7 @@ function appendReplacementGuide(host,key,initialVariant=0){
   const guide=guides[variant],cards=replacementCards(cameraModel?{...guide,after:null}:guide);
   const cameraFinish=!!cameraModel&&page===cards.length-1;
   choices.innerHTML='';
-  guides.forEach((g,i)=>{if(guides.length<2)return;const b=document.createElement('button');b.className='replacement-choice';b.textContent=g.label;b.setAttribute('aria-pressed',String(i===variant));b.onclick=()=>{variant=i;page=0;draw(true);};choices.appendChild(b);});
+  guides.forEach((g,i)=>{if(guides.length<2||onlyVariant)return;const b=document.createElement('button');b.className='replacement-choice';b.textContent=g.label;b.setAttribute('aria-pressed',String(i===variant));b.onclick=()=>{variant=i;page=0;draw(true);};choices.appendChild(b);});
   // Keep the player and photos mounted while paging; otherwise their height collapses.
   const previousHeight=stage.getBoundingClientRect().height;
   if(focus)stage.style.minHeight=Math.max(previousHeight,parseFloat(stage.style.minHeight)||0)+'px';
@@ -10890,15 +10907,16 @@ function renderEquipReplaceDetailScreen(){
   const dev = EQUIP_REPLACE_DEVICES.find(d => d.name === selectedEquipReplaceDevice);
   const printer = selectedEquipReplaceDevice === '프린터' ? PRINTER_MODELS.find(m=>m.id===selectedPrinterModel) : null;
   const camera = selectedEquipReplaceDevice === '카메라' ? CAMERA_MODELS.find(m=>m.id===selectedCameraModel) : null;
-  const title = printer ? printer.label : camera ? camera.sub : (dev ? dev.name : '');
+  const rawKey=selectedEquipReplaceDevice==='카메라'?'카메라:'+selectedCameraModel:printer?'프린터:'+selectedPrinterModel:selectedEquipReplaceDevice;
+  const selection=replacementSelection(rawKey,takeGuideSearchVariant(replacementSelection(rawKey).key));
+  const title = printer ? printer.label : camera ? camera.sub : selection.title || (dev ? dev.name : '');
   const wrap = document.createElement('div');
   wrap.className = 'colorsetup-screen hud-frame';
   wrap.innerHTML = '<div class="colorsetup-icon">'+(dev ? dev.icon : '🔄')+'</div>' +
     '<div class="t1">'+title+' 교체 방법</div>';
   area.innerHTML = '';
   area.appendChild(wrap);
-  const guideKey=selectedEquipReplaceDevice==='카메라'?'카메라:'+selectedCameraModel:printer?'프린터:'+selectedPrinterModel:selectedEquipReplaceDevice;
-  appendReplacementGuide(wrap,guideKey,takeGuideSearchVariant(guideKey));
+  appendReplacementGuide(wrap,selection.key,selection.variant,{onlyVariant:selection.isolated});
   document.getElementById('breadcrumb').innerHTML = '장비 교체 방법<span class="sep">·</span>'+title;
 }
 

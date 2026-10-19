@@ -73,3 +73,8 @@
 - 승인된 CMS 회원과 기존 관리자만 공지·의견 기능을 이용합니다. 체험용 계정은 안내 전용 권한을 유지하며 메뉴와 서버 읽기/쓰기를 모두 차단합니다.
 - 관리자는 공지 관리 및 의견 답변, 일반 회원은 게시 기간 내 공지 읽기 및 자기 의견 확인만 가능합니다. 대시보드 상단에 공지 관리·의견함, 전체 화면에 공지사항·의견 남기기를 연결합니다.
 - 새 대시보드 및 기존 로그인/가입 승인/안내/다이어그램 권한은 유지합니다. helperRenderPerformance 등 staging 전용 통계는 활성화하지 않습니다.
+
+
+## 2026-10-19 — Separate control replacement entry points
+
+Remote and service-coin/settings replacements now open separately from picker, equipment menu and search. The original shared replacement manual key and variant indexes remain unchanged so saved edits/media stay attached. The selected part renders only its own variant; other equipment variant selectors are unchanged. Production-only UI correction.

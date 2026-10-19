@@ -37,6 +37,41 @@ test('each indexed route resolves to the correct model, variant or approved manu
  const c=harness();vm.runInContext(`globalThis.failures=buildGuideSearchIndex().filter(e=>e.route==='replace'?!REPLACEMENT_GUIDES[e.key]?.[e.variant]:e.route==='snap'?!snapEntries(e.device,e.category)[e.index]?.cards.length:e.route==='camera'?!CAMERA_MODELS.some(m=>m.id===e.model):!TREES[e.sid]);`,c);
  assert.equal(c.failures.length,0);
 });
+
+test('remote and service-control search results keep their own replacement target and saved manual',()=>{
+ const c=harness();
+ vm.runInContext(`globalThis.controlEntries=buildGuideSearchIndex().filter(e=>e.route==='replace'&&e.key==='리모컨 / 서비스코인 / 설정');
+ globalThis.remoteResults=rankGuideSearch(controlEntries,'리모컨 교체');
+ globalThis.coinResults=rankGuideSearch(controlEntries,'서비스코인 교체');`,c);
+ assert.equal(c.controlEntries.length,2);
+ assert.equal(c.remoteResults.length,1);assert.equal(c.remoteResults[0].device,'리모컨');assert.equal(c.remoteResults[0].variant,0);
+ assert.equal(c.coinResults.length,1);assert.equal(c.coinResults[0].device,'서비스코인 / 설정');assert.equal(c.coinResults[0].variant,1);
+ for(const [part,index] of [['리모컨',0],['서비스코인',1],['설정',1],['서비스코인 / 설정',1]]){
+  const target=c.replacementSelection(part);assert.equal(target.variant,index);assert.equal(target.key,'리모컨 / 서비스코인 / 설정');assert.equal(target.isolated,true);
+ }
+ assert.equal(c.replacementSelection('리모컨 / 서비스코인 / 설정',1).variant,1);
+ assert.equal(c.replacementSelection('에스라이트',1).isolated,false);
+});
+
+test('each control replacement renders only its selected media while retaining saved variant IDs',()=>{
+ class El{
+  constructor(tag){this.tag=tag;this.children=[];this.style={};}
+  appendChild(x){if(x.tag==='fragment')this.children.push(...x.children);else this.children.push(x);return x;}
+  set innerHTML(x){this.children=[];}setAttribute(){}
+  getBoundingClientRect(){return {height:300};}replaceChildren(...x){this.children=[];x.forEach(n=>this.appendChild(n));}
+ }
+ const doc={createElement:t=>new El(t),createDocumentFragment:()=>new El('fragment')};
+ const calls=[],sources=[];
+ const c=vm.createContext({document:doc,appendReplacementMedia(host,key,indices){calls.push({key,indices:[...indices]});},editableManualChanged(source){sources.push(source);return false;}});
+ vm.runInContext(section('const REPLACEMENT_GUIDES =','function appendReplacementMedia('),c);
+ const key='리모컨 / 서비스코인 / 설정';
+ for(const variant of [0,1]){
+  const host=new El('main');c.appendReplacementGuide(host,key,variant,{onlyVariant:true});
+  assert.equal(host.children[0].children.length,2,'only media and steps; no cross-part picker');
+ }
+ assert.deepEqual(calls,[{key,indices:[0,1]},{key,indices:[2,3]}]);
+ assert.deepEqual(sources,['replace:'+key+':0','replace:'+key+':1']);
+});
 test('replacement next retains media nodes and height, while changing a variant replaces media',()=>{
  class El{
   constructor(tag){this.tag=tag;this.children=[];this.style={};this.dataset={};this.height=300;}
