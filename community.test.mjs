@@ -4,6 +4,29 @@ import vm from 'node:vm';
 import {readFileSync} from 'node:fs';
 const source=readFileSync(new URL('community-ui.js',import.meta.url),'utf8');
 const ctx=vm.createContext({URL});vm.runInContext(source,ctx);
+test('production community requires an eligible signed-in account and selected CMS store',()=>{
+ for(const [currentUser,allowed] of [[null,false],[{role:'demo'},false],[{role:'admin'},true],[{role:'staff',cmsId:'store',branchName:''},false],[{role:'staff',cmsId:'store',branchName:'지점'},true]]){
+  const c=vm.createContext({currentUser,APP_ENV:'production'});vm.runInContext(source,c);assert.equal(c.helperCommunityAllowed(),allowed);
+ }
+});
+test('production connects community routes and dashboard entries without enabling staging analytics',()=>{
+ const html=readFileSync(new URL('index.html',import.meta.url),'utf8');
+ const render=html.slice(html.indexOf('function render(){'),html.indexOf('function renderChat(){'));
+ assert.match(render,/helperNavigation\(\)/);assert.match(render,/renderAnnouncementsScreen\(\)/);assert.match(render,/renderSuggestionsScreen\(\)/);
+ assert.match(render,/\['announcements','suggestions'\]\.includes\(appState\) && !helperCommunityAllowed\(\)/);
+ const dash=readFileSync(new URL('dashboard.js',import.meta.url),'utf8');for(const id of ['dbNoticesBtn','dbSuggestionsBtn','dbSuggestionInboxBtn'])assert.ok(dash.includes(id));
+ assert.equal((html.match(/helperRenderPerformance\(events,profiles\)/g)||[]).length,1);
+});
+test('production community storage limits members to their own opinions and published notices',()=>{
+ const sql=readFileSync(new URL('supabase/migrations/202610190001_production_community.sql',import.meta.url),'utf8');
+ assert.equal((sql.match(/enable row level security/g)||[]).length,3);
+ assert.equal((sql.match(/as restrictive for all to authenticated/g)||[]).length,3);
+ assert.equal((sql.match(/public\.helper_has_access\(\) and not public\.helper_is_demo\(\)/g)||[]).length,6);
+ assert.match(sql,/using\(user_id=auth.uid\(\) or public.is_admin\(\)\)/);
+ assert.match(sql,/ends_at is null or ends_at>now\(\)/);
+ assert.match(sql,/grant insert\(id,category,body,context\),update\(status,reply\)/);
+ assert.doesNotMatch(sql,/grant .* to anon|update public\.profiles|delete from|drop table/i);
+});
 const event=(attempt,type,outcome,minute,user='u')=>({user_id:user,event_type:type,outcome,symptom_id:'PRT-1',created_at:new Date(1700000000000+minute*60000).toISOString(),detail:JSON.stringify({v:2,attempt})});
 test('outcome changes are deduplicated per user and attempt, legacy records excluded',()=>{
  const events=[event('a','symptom_click',null,0),event('a','symptom_outcome','escalate',1),event('a','symptom_outcome','solved',3),event('a','symptom_outcome','solved',4),{event_type:'symptom_outcome',outcome:'solved',detail:null}];

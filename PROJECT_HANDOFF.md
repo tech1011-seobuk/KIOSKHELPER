@@ -21,7 +21,7 @@
 - Production: KIOSKHELPER / Supabase lsetixbyarexggxsihen. Staging: kioskhelper-staging / mjzhljlhjsbnnxyekmwy. Keep credentials, cache names, queues and data isolated.
 - Latest staging kiosk UI sources are promoted from e13c0d2689a2469a7f749d73a32085cc47ac698b. Production keeps CMS signup/approval, store selection, administrator login, greeting and inline videos.
 - The single 계정 추가 action issues guidance-only viewing accounts. It does not grant administrator privileges or require CMS membership. Existing administrators remain administrators. Legacy company account helperadmin01 was converted to viewing-only with its existing password preserved.
-- Production does not expose diagram/manual editors or staging community controls. All administrator routes must remain blocked for viewing accounts.
+- Production does not expose diagram/manual editors. All administrator routes must remain blocked for viewing accounts. Community notices/opinions are now enabled separately under the approved-member/admin boundary below.
 - `supabase/migrations/202610160003_production_guide_catalog.sql` was applied after a rollback validation. Do not rerun completed migrations. Guide/media promotion is separate from static UI deployment; preserve CAS revisions and history.
 - Use the GitHub Actions workflow **Deploy current production code** (`deploy-current-production.yml`). Do not run the old wholesale staging-copy workflow (`apply-production.yml`), which would overwrite production-specific authentication.
 - Build: `npm ci`, `npm run build`, `npm test`. Commit original model/UI sources, generated index.html and sw.js, and required assets together. Build updates the production cache version.
@@ -65,3 +65,11 @@
 - 새 방식의 조치는 사용자+진행 번호로 중복을 구분하고 마지막 유효 결과만 집계합니다. 과거 결과 기록은 따로 보존합니다. 해결 확인 비율은 solved/(solved+escalate+as), 결과 응답률은 (solved+escalate+as+info)/시작입니다. 일반 안내 완료를 미해결로 계산하지 않습니다.
 - 보완 검토 후보는 결과 10건 이상, 채널톡 문의 안내 1건 이상인 증상에 한해 문의 안내 비율 순입니다. A/S와 미응답만으로 매뉴얼 부족을 판단하지 않습니다. 실제 채널톡 접수, 단계별 이탈/시간, 검색 실패는 현재 자료로 확인할 수 없다고 표시합니다.
 - 신규 원본 dashboard.js/dashboard.css는 sync-community.cjs를 통해 index.html에 포함합니다. 운영 배포는 기존 production workflow를 사용하며 staging 전체 복사는 금지합니다.
+
+
+## 2026-10-19 공지사항·의견 남기기 운영 연결
+- 운영에는 공지/의견/읽음 테이블이 없고 메뉴·라우팅도 빠져 있음을 확인했습니다. 최신 대시보드 변경이 테이블을 삭제한 것은 아닙니다.
+- 사용자 승인 후 운영 전용 추가 migration 202610190001을 적용했습니다. 실제 회원/관리자/체험 계정 권한을 트랜잭션 안에서 검증하고 전부 롤백한 뒤 적용했으며, 초기 세 테이블의 건수는 모두 0입니다. 기존 staging DB 자료를 복사하지 않습니다. 완료한 migration을 다시 실행하지 마세요.
+- 승인된 CMS 회원과 기존 관리자만 공지·의견 기능을 이용합니다. 체험용 계정은 안내 전용 권한을 유지하며 메뉴와 서버 읽기/쓰기를 모두 차단합니다.
+- 관리자는 공지 관리 및 의견 답변, 일반 회원은 게시 기간 내 공지 읽기 및 자기 의견 확인만 가능합니다. 대시보드 상단에 공지 관리·의견함, 전체 화면에 공지사항·의견 남기기를 연결합니다.
+- 새 대시보드 및 기존 로그인/가입 승인/안내/다이어그램 권한은 유지합니다. helperRenderPerformance 등 staging 전용 통계는 활성화하지 않습니다.

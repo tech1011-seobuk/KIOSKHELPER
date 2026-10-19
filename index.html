@@ -6808,19 +6808,22 @@ function helperInit(){
     @media(max-width:540px){.helper-panel{padding:12px}.helper-card{padding:16px}.helper-kpis{grid-template-columns:1fr 1fr}.helper-value{font-size:23px}}
   `;document.head.appendChild(style);
 }
+function helperCommunityAllowed(){
+  return !!currentUser && currentUser.role !== 'demo' && (!currentUser.cmsId || !!currentUser.branchName);
+}
 function helperNavigation(){
-  if(APP_ENV!=='staging')return;
   helperInit();
   let nav=document.getElementById('helperNav');
   if(!nav){
     nav=document.createElement('div');nav.id='helperNav';nav.className='helper-nav';
     document.getElementById('chatArea').before(nav);
-    for(const [page,label] of [['announcements','📢 공지사항'],['suggestions','💡 개선 제안']]){
+    for(const [page,label] of [['announcements','📢 공지사항'],['suggestions','의견 남기기']]){
       const btn=document.createElement('button');btn.textContent=label;
       btn.onclick=()=>{appState=page;render();};nav.appendChild(btn);
     }
   }
-  nav.hidden=!currentUser;nav.style.display=currentUser?'flex':'none';
+  const visible=helperCommunityAllowed() && appState!=='login';
+  nav.hidden=!visible;nav.style.display=visible?'flex':'none';
   let photos=document.getElementById('helperPhotoReviewButton');
   if(!photos){photos=document.createElement('button');photos.id='helperPhotoReviewButton';photos.textContent='🖼️ 사진 모아보기';photos.onclick=()=>{appState='photoReview';render();};nav.appendChild(photos);}
   photos.hidden=true;
@@ -6916,10 +6919,12 @@ function helperOwnerValid(owner,page){return currentUser?.id===owner && appState
 function helperShell(title,subtitle){
   document.getElementById('breadcrumb').textContent=title;
   const area=document.getElementById('chatArea');area.innerHTML='<section class="helper-panel"><button id="helperHome">← 홈</button><h1>'+title+'</h1><p class="helper-small">'+subtitle+'</p><div id="helperContent">불러오는 중...</div></section>';
-  document.getElementById('helperHome').onclick=()=>{appState='hub';render();};return document.getElementById('helperContent');
+  document.getElementById('helperHome').textContent=currentUser?.role==='admin'?'← 대시보드로':'← 홈으로';
+  document.getElementById('helperHome').onclick=()=>{appState=currentUser?.role==='admin'?'adminDashboard':'hub';render();};return document.getElementById('helperContent');
 }
 async function renderAnnouncementsScreen(){
-  if(!currentUser)return;
+  if(!helperCommunityAllowed())return;
+  helperInit();
   const owner=currentUser.id,admin=currentUser.role==='admin';
   const content=helperShell('📢 공지사항','업데이트 일정과 변경 사항을 확인하세요.');
   try{
@@ -6966,7 +6971,7 @@ function helperNoticeEditor(content,row={}){
   };
 }
 async function helperCheckNotices(){
-  if(APP_ENV!=='staging')return;
+  if(!helperCommunityAllowed())return;
   if(!currentUser||helperNoticeBusy||helperNoticeOwner===currentUser.id||appState!=='hub')return;
   const owner=currentUser.id;helperNoticeBusy=true;
   try{
@@ -6991,9 +6996,10 @@ async function helperCheckNotices(){
   finally{helperNoticeBusy=false;}
 }
 async function renderSuggestionsScreen(){
-  if(!currentUser)return;
+  if(!helperCommunityAllowed())return;
+  helperInit();
   const owner=currentUser.id,admin=currentUser.role==='admin';
-  const content=helperShell('💡 개선 제안','더 나은 조치 안내를 위한 의견을 남겨주세요. 긴급 장애는 조치 안내 후 채널톡으로 문의해주세요.');
+  const content=helperShell('의견 남기기','더 나은 조치 안내를 위한 의견을 남겨주세요. 긴급 장애는 조치 안내 후 채널톡으로 문의해주세요.');
   content.innerHTML='<form class="helper-card"><h2>의견 남기기</h2><label>구분<select name="category">'+helperOptions(helperCategories)+'</select></label><label>내용<textarea name="body" maxlength="3000" placeholder="불편했던 점이나 필요한 사진·영상을 알려주세요." required></textarea></label><p class="helper-small">비밀번호나 고객 개인정보는 적지 말아주세요. 작성한 의견은 이 계정과 관리자만 볼 수 있어요.</p><p role="status"></p><button class="helper-primary" type="submit">제안 보내기</button></form><h2>'+(admin?'접수된 개선 제안':'내 계정의 개선 제안')+'</h2><div id="helperSuggestionList">불러오는 중...</div>';
   const form=content.querySelector('form');let requestId=crypto.randomUUID();
   form.onsubmit=async e=>{
@@ -7639,18 +7645,19 @@ const HelperDashboard = (() => {
       symptoms+=panel('과거 결과 기록','진행 번호가 없는 이전 기록입니다. 중복 선택이 포함될 수 있으며 위의 조치 수와 합산하지 않습니다.',table(['증상','결과 기록','해결 확인','채널톡 문의 안내','A/S 안내','안내 확인 완료','해결 비율'],legacyRows));
       const recentList=m.recent.length?m.recent.slice(0,20).map(e=>'<article class="db-message"><div><strong>'+esc(title(e))+'</strong><span class="db-chip">'+labels[e.outcome]+'</span></div><p>'+esc(e.branch_name||'지점 미기록')+' · '+esc(m.people.get(e.user_id)?.display_name||'계정명 없음')+'</p><small>'+stamp(e.end)+'</small></article>').join(''):blank('최근 조치 기록에서 문의·A/S 안내 결과가 없어요.');
       const feedbackList=m.feedback.length?m.feedback.slice(0,50).map(e=>'<article class="db-message"><div><strong>'+esc(title(e))+'</strong><small>'+stamp(e.time)+'</small></div><p class="db-message-body">'+esc(e.feedback)+'</p><small>'+esc(brandLabel(e.brand)+' · '+(e.device||'장비 미기록')+' · '+(e.branch_name||'지점 미기록'))+'</small></article>').join(''):blank('아직 남겨진 의견이 없어요. 의견이 없다는 것이 불편함이 없다는 뜻은 아닙니다.');
-      const feedback=panel('사용자가 남긴 의견',num(m.feedback.length)+'건 · 최근 50건 표시 · 원문을 확인하고 보완할 내용을 판단하세요.',feedbackList)+panel('최근 채널톡 문의·A/S 안내','새 방식의 조치 기록 · 마지막 결과 기준 최근 20건 · 실제 상담·수리 접수와 다릅니다.','<div class="db-note">CMS로 이동해 문의하기 버튼을 누른 조치: '+num(m.support)+'건 · 실제 채널톡 상담 접수 건수와 다릅니다.</div>'+recentList);
+      const feedback=panel('의견함','의견 남기기로 접수된 제안과 관리자 답변을 확인합니다.','<button type="button" id="dbSuggestionInboxBtn">접수된 의견 전체 보기 →</button>')+panel('조치 과정에서 남긴 의견',num(m.feedback.length)+'건 · 최근 50건 표시 · 원문을 확인하고 보완할 내용을 판단하세요.',feedbackList)+panel('최근 채널톡 문의·A/S 안내','새 방식의 조치 기록 · 마지막 결과 기준 최근 20건 · 실제 상담·수리 접수와 다릅니다.','<div class="db-note">CMS로 이동해 문의하기 버튼을 누른 조치: '+num(m.support)+'건 · 실제 채널톡 상담 접수 건수와 다릅니다.</div>'+recentList);
       const userTable=table(['계정','현재 등록 지점','장비·증상 클릭'],sorted(m.userRows).map(([id,n])=>{const p=m.people.get(id);return [esc(p?.display_name||p?.email||'계정 정보 없음')+(p?.role==='admin'?'<span class="db-sub">관리자</span>':''),esc(p?.branch_name||'미등록'),num(n)];}));
       const hours=bars(m.hours.map((n,h)=>[String(h).padStart(2,'0')+'시',n]).filter(([,n])=>n>0));
       const stores= '<div class="db-grid">'+panel('지점별 활동','활동 당시 지점명 기준 · 지점 미기록 클릭 '+num(m.unknownBranch)+'회',bars(sorted(m.branchRows)))+panel('시간대별 이용','한국 시간 · 장비·증상 클릭수',hours)+'</div>'+panel('매장 계정별 활동','선택 기간·브랜드·장비 조건 기준',userTable)+panel('선택 조건에서 활동이 없는 계정','전체 계정 중 현재 필터에 해당하는 활동이 없는 계정입니다. 미사용 사유는 확인되지 않습니다.',m.inactive.length?'<div class="db-chips">'+m.inactive.map(p=>'<span class="db-chip">'+esc(p.display_name||p.email||'이름 없음')+'</span>').join('')+'</div>':blank('선택 조건에서 모든 대상 계정의 이용 기록이 있어요.'));
       const panes={overview,symptoms,feedback,stores};
-      root.innerHTML='<header class="db-header"><div><span class="db-eyebrow">PHOTOISM HELPER · 운영 현황</span><h1>대시보드</h1><p>이용 흐름을 살펴보고, 다음에 보완할 안내를 찾아보세요.</p></div><div class="db-actions"><button id="cmsApprovalsBtn" type="button">회원 가입 승인</button><button id="accountCreateBtn" type="button">계정 추가</button><button id="csvExportBtn" type="button">기록 내보내기</button></div></header>'+controls+'<p class="db-scope" role="status">'+esc(subtitle)+' · '+num(m.period.length)+'개 활동 기록 · '+stamp(m.now)+' 기준</p>'+summaries+'<div class="db-tabs" role="tablist" aria-label="대시보드 항목">'+[['overview','전체 현황'],['symptoms','증상·조치 결과'],['feedback','의견·보완'],['stores','매장 활동']].map(([id,l])=>'<button type="button" role="tab" id="dbTab-'+id+'" aria-selected="'+(tab===id)+'" aria-controls="dbPane-'+id+'" data-tab="'+id+'">'+l+'</button>').join('')+'</div>'+Object.entries(panes).map(([id,html])=>'<div id="dbPane-'+id+'" role="tabpanel" aria-labelledby="dbTab-'+id+'"'+(id===tab?'':' hidden')+'>'+html+'</div>').join('')+defs+'<div class="db-drawer-host"></div>';
+      root.innerHTML='<header class="db-header"><div><span class="db-eyebrow">PHOTOISM HELPER · 운영 현황</span><h1>대시보드</h1><p>이용 흐름을 살펴보고, 다음에 보완할 안내를 찾아보세요.</p></div><div class="db-actions"><button id="cmsApprovalsBtn" type="button">회원 가입 승인</button><button id="accountCreateBtn" type="button">계정 추가</button><button id="dbNoticesBtn" type="button">공지 관리</button><button id="dbSuggestionsBtn" type="button">의견함</button><button id="csvExportBtn" type="button">기록 내보내기</button></div></header>'+controls+'<p class="db-scope" role="status">'+esc(subtitle)+' · '+num(m.period.length)+'개 활동 기록 · '+stamp(m.now)+' 기준</p>'+summaries+'<div class="db-tabs" role="tablist" aria-label="대시보드 항목">'+[['overview','전체 현황'],['symptoms','증상·조치 결과'],['feedback','의견·보완'],['stores','매장 활동']].map(([id,l])=>'<button type="button" role="tab" id="dbTab-'+id+'" aria-selected="'+(tab===id)+'" aria-controls="dbPane-'+id+'" data-tab="'+id+'">'+l+'</button>').join('')+'</div>'+Object.entries(panes).map(([id,html])=>'<div id="dbPane-'+id+'" role="tabpanel" aria-labelledby="dbTab-'+id+'"'+(id===tab?'':' hidden')+'>'+html+'</div>').join('')+defs+'<div class="db-drawer-host"></div>';
       const setTab=id=>{if(!panes[id])return;tab=id;root.querySelectorAll('[role=tab]').forEach(b=>b.setAttribute('aria-selected',String(b.dataset.tab===tab)));root.querySelectorAll('[role=tabpanel]').forEach(p=>p.hidden=p.id!=='dbPane-'+tab);root.querySelector('#dbTab-'+tab).focus({preventScroll:true});};
       root.querySelectorAll('[data-tab]').forEach(b=>{b.onclick=()=>setTab(b.dataset.tab);b.onkeydown=e=>{if(!['ArrowLeft','ArrowRight','Home','End'].includes(e.key))return;e.preventDefault();const ids=Object.keys(panes),i=ids.indexOf(tab);setTab(e.key==='Home'?ids[0]:e.key==='End'?ids.at(-1):ids[(i+(e.key==='ArrowRight'?1:ids.length-1))%ids.length]);};});
       root.querySelectorAll('[data-tab-link]').forEach(b=>b.onclick=()=>setTab(b.dataset.tabLink));
       const filter=(id,key)=>{root.querySelector('#'+id).onchange=e=>{options[key]=e.target.value;if(key==='brand')options.device='';chosen=null;draw(id);};};
       filter('dbPeriod','days');filter('dbBrand','brand');filter('dbDevice','device');filter('dbAudience','audience');
       root.querySelector('#cmsApprovalsBtn').onclick=actions.approvals;root.querySelector('#accountCreateBtn').onclick=actions.accounts;
+      root.querySelector('#dbNoticesBtn').onclick=actions.notices;root.querySelector('#dbSuggestionsBtn').onclick=actions.suggestions;root.querySelector('#dbSuggestionInboxBtn').onclick=actions.suggestions;
       root.querySelector('#csvExportBtn').onclick=()=>actions.export(m.period,Object.fromEntries(profiles.map(p=>[p.id,p.display_name||p.email||''])));
       root.querySelectorAll('[data-detail]').forEach(b=>b.onclick=()=>openDetail(m,b.dataset.detail,b));
       if(focusId)root.querySelector('#'+focusId)?.focus({preventScroll:true});
@@ -10274,6 +10281,8 @@ function renderAdminDashboardContent(events, profiles){
     label: id => SYMPTOM_LABEL[id] || (typeof editableManual === 'function' ? editableManual(id)?.title : '') || id,
     approvals: () => { appState='cmsApprovals'; render(); },
     accounts: () => { appState='accountCreate'; render(); },
+    notices: () => { appState='announcements'; render(); },
+    suggestions: () => { appState='suggestions'; render(); },
     export: exportEventsToCSV
   });
 }
@@ -11206,6 +11215,7 @@ function updateResetButton(){
 
 let screenSwapTimer=null,screenEnterTimer=null;
 function render(){
+  if(['announcements','suggestions'].includes(appState) && !helperCommunityAllowed())appState=currentUser?'hub':'login';
   if(currentUser?.role==='demo'&&['accountCreate','adminAccount','demoAccount','cmsApprovals','adminDashboard','diagramEditor','storeSelect'].includes(appState))appState='hub';
   if(currentUser?.cmsId && !currentUser.branchName && appState!=='login')appState='storeSelect';
   const area = document.getElementById('chatArea');
@@ -11225,6 +11235,8 @@ function render(){
     else if(appState === 'storeSelect') renderStoreSelection();
     else if(appState === 'cmsApprovals') renderCmsApprovals();
     else if(['accountCreate','adminAccount','demoAccount'].includes(appState)) renderAccountCreateScreen();
+    else if(appState === 'announcements') renderAnnouncementsScreen();
+    else if(appState === 'suggestions') renderSuggestionsScreen();
     else if(appState === 'guideSearch') renderGuideSearchScreen();
     else if(appState === 'snapManuals') renderSnapManuals();
     else if(appState === 'adminDashboard') renderAdminDashboardScreen();
@@ -11249,6 +11261,7 @@ function render(){
     else if(appState === 'chat') renderChat();
     updateResetButton();
     updateGuideSearchEntry();
+    helperNavigation();
     area.classList.add('stage-enter');
     screenEnterTimer=setTimeout(()=>area.classList.remove('stage-enter'),520);
   };

@@ -29,19 +29,22 @@ function helperInit(){
     @media(max-width:540px){.helper-panel{padding:12px}.helper-card{padding:16px}.helper-kpis{grid-template-columns:1fr 1fr}.helper-value{font-size:23px}}
   `;document.head.appendChild(style);
 }
+function helperCommunityAllowed(){
+  return !!currentUser && currentUser.role !== 'demo' && (!currentUser.cmsId || !!currentUser.branchName);
+}
 function helperNavigation(){
-  if(APP_ENV!=='staging')return;
   helperInit();
   let nav=document.getElementById('helperNav');
   if(!nav){
     nav=document.createElement('div');nav.id='helperNav';nav.className='helper-nav';
     document.getElementById('chatArea').before(nav);
-    for(const [page,label] of [['announcements','📢 공지사항'],['suggestions','💡 개선 제안']]){
+    for(const [page,label] of [['announcements','📢 공지사항'],['suggestions','의견 남기기']]){
       const btn=document.createElement('button');btn.textContent=label;
       btn.onclick=()=>{appState=page;render();};nav.appendChild(btn);
     }
   }
-  nav.hidden=!currentUser;nav.style.display=currentUser?'flex':'none';
+  const visible=helperCommunityAllowed() && appState!=='login';
+  nav.hidden=!visible;nav.style.display=visible?'flex':'none';
   let photos=document.getElementById('helperPhotoReviewButton');
   if(!photos){photos=document.createElement('button');photos.id='helperPhotoReviewButton';photos.textContent='🖼️ 사진 모아보기';photos.onclick=()=>{appState='photoReview';render();};nav.appendChild(photos);}
   photos.hidden=true;
@@ -137,10 +140,12 @@ function helperOwnerValid(owner,page){return currentUser?.id===owner && appState
 function helperShell(title,subtitle){
   document.getElementById('breadcrumb').textContent=title;
   const area=document.getElementById('chatArea');area.innerHTML='<section class="helper-panel"><button id="helperHome">← 홈</button><h1>'+title+'</h1><p class="helper-small">'+subtitle+'</p><div id="helperContent">불러오는 중...</div></section>';
-  document.getElementById('helperHome').onclick=()=>{appState='hub';render();};return document.getElementById('helperContent');
+  document.getElementById('helperHome').textContent=currentUser?.role==='admin'?'← 대시보드로':'← 홈으로';
+  document.getElementById('helperHome').onclick=()=>{appState=currentUser?.role==='admin'?'adminDashboard':'hub';render();};return document.getElementById('helperContent');
 }
 async function renderAnnouncementsScreen(){
-  if(!currentUser)return;
+  if(!helperCommunityAllowed())return;
+  helperInit();
   const owner=currentUser.id,admin=currentUser.role==='admin';
   const content=helperShell('📢 공지사항','업데이트 일정과 변경 사항을 확인하세요.');
   try{
@@ -187,7 +192,7 @@ function helperNoticeEditor(content,row={}){
   };
 }
 async function helperCheckNotices(){
-  if(APP_ENV!=='staging')return;
+  if(!helperCommunityAllowed())return;
   if(!currentUser||helperNoticeBusy||helperNoticeOwner===currentUser.id||appState!=='hub')return;
   const owner=currentUser.id;helperNoticeBusy=true;
   try{
@@ -212,9 +217,10 @@ async function helperCheckNotices(){
   finally{helperNoticeBusy=false;}
 }
 async function renderSuggestionsScreen(){
-  if(!currentUser)return;
+  if(!helperCommunityAllowed())return;
+  helperInit();
   const owner=currentUser.id,admin=currentUser.role==='admin';
-  const content=helperShell('💡 개선 제안','더 나은 조치 안내를 위한 의견을 남겨주세요. 긴급 장애는 조치 안내 후 채널톡으로 문의해주세요.');
+  const content=helperShell('의견 남기기','더 나은 조치 안내를 위한 의견을 남겨주세요. 긴급 장애는 조치 안내 후 채널톡으로 문의해주세요.');
   content.innerHTML='<form class="helper-card"><h2>의견 남기기</h2><label>구분<select name="category">'+helperOptions(helperCategories)+'</select></label><label>내용<textarea name="body" maxlength="3000" placeholder="불편했던 점이나 필요한 사진·영상을 알려주세요." required></textarea></label><p class="helper-small">비밀번호나 고객 개인정보는 적지 말아주세요. 작성한 의견은 이 계정과 관리자만 볼 수 있어요.</p><p role="status"></p><button class="helper-primary" type="submit">제안 보내기</button></form><h2>'+(admin?'접수된 개선 제안':'내 계정의 개선 제안')+'</h2><div id="helperSuggestionList">불러오는 중...</div>';
   const form=content.querySelector('form');let requestId=crypto.randomUUID();
   form.onsubmit=async e=>{
