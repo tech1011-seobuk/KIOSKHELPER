@@ -42,3 +42,12 @@
 - Replacement paging retains video/image DOM and reserves text-card height to avoid scroll jumps/player resets.
 - ES-1 database media: n1 only C dial image; n2a/n3a retain the two recent photos and remove E01 video stills. Existing relevant n3a video remains. Each environment uses its own C-image URL and revision-guarded save history.
 - Verification: guide-search.test.mjs plus existing regression suites and 390px browser check.
+
+
+## 2026-10-19 카메라 교체 시작 카드 정리
+- R10·850D·M50 교체 화면에서 상단 영상으로 이미 분리된 ‘교체 영상·사진 매뉴얼’ 전용 카드를 건너뜁니다. 준비물·주의사항이 바로 STEP 1로 표시됩니다.
+- 수정한 설명·사진·첨부·분기 선택지가 있는 카드는 유지합니다. 저장된 안내 원문과 관리자 편집 초안은 변경하지 않습니다.
+- 두 환경 각각의 최신 코드에 같은 표시 로직만 적용합니다. 운영 CMS 로그인·관리자 권한 등 다른 기능은 유지합니다.
+- 상단 중앙에 큰 화면 이동 영역을 배치했습니다. 기존 이전/다시 시작 동작과 홈 이동을 재사용하고 로그인·홈에서는 비어 있는 영역을 숨깁니다. 모바일 버튼 높이는 48px 이상입니다.
+- 검증: 본서버 151개, 테스트 서버 103개 자동 검사 통과. 세 카메라의 빈 소개 카드 생략, 기존 사진·설명·분기 보존을 포함합니다.
+- 사용자 요청으로 자동 음성 읽기·목소리 설정 UI와 음성 합성 코드를 제거했습니다. 단계별 안내와 의견 전송은 유지합니다.
