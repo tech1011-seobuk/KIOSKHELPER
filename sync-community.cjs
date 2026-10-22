@@ -45,3 +45,5 @@ for(const [name,start,end,anchor] of [
 }
 
 fs.writeFileSync(file,html);
+
+{const start='/* ACCOUNT NOTIFICATIONS START */',end='/* ACCOUNT NOTIFICATIONS END */';const block=start+'\n'+fs.readFileSync(path.join(root,'notifications-ui.js'),'utf8')+'\n'+end;if(html.includes(start))html=html.slice(0,html.indexOf(start))+block+html.slice(html.indexOf(end)+end.length);else html=html.replace('/* ============================= FLOW LOGIC ============================= */',block+'\n/* ============================= FLOW LOGIC ============================= */');fs.writeFileSync(file,html);}

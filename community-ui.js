@@ -223,9 +223,11 @@ async function renderSuggestionsScreen(){
   if(!helperCommunityAllowed())return;
   helperInit();
   const owner=currentUser.id,admin=currentUser.role==='admin';
+  const focusId=helperSuggestionFocus;helperSuggestionFocus=null;
   const content=helperShell('의견 남기기','더 나은 조치 안내를 위한 의견을 남겨주세요. 긴급 장애는 조치 안내 후 채널톡으로 문의해주세요.');
   content.innerHTML='<form class="helper-card"><h2>의견 남기기</h2><label>구분<select name="category">'+helperOptions(helperCategories)+'</select></label><label>내용<textarea name="body" maxlength="3000" placeholder="불편했던 점이나 필요한 사진·영상을 알려주세요." required></textarea></label><p class="helper-small">비밀번호나 고객 개인정보는 적지 말아주세요. 작성한 의견은 이 계정과 관리자만 볼 수 있어요.</p><p role="status"></p><button class="helper-primary" type="submit">제안 보내기</button></form><h2>'+(admin?'접수된 개선 제안':'내 계정의 개선 제안')+'</h2><div id="helperSuggestionList">불러오는 중...</div>';
-  const form=content.querySelector('form');let requestId=crypto.randomUUID();
+  if(focusId){const all=document.createElement('button');all.textContent='전체 의견 목록 보기';all.onclick=()=>renderSuggestionsScreen();content.prepend(all);}
+  const form=content.querySelector('form');if(focusId)form.hidden=true;let requestId=crypto.randomUUID();
   form.onsubmit=async e=>{
     e.preventDefault();const body=form.elements.body.value.trim();if(!body)return;
     const btn=form.querySelector('button'),status=form.querySelector('[role=status]');btn.disabled=true;status.textContent='저장 중...';
@@ -240,7 +242,7 @@ async function renderSuggestionsScreen(){
   async function loadList(more=false){
     const list=content.querySelector('#helperSuggestionList');if(!more)loaded=0;
     try{
-      let query=sb.from('helper_suggestions').select('*').order('created_at',{ascending:false}).order('id').range(loaded,loaded+49);if(!admin)query=query.eq('user_id',owner);
+      let query=sb.from('helper_suggestions').select('*').order('created_at',{ascending:false}).order('id').range(loaded,loaded+49);if(!admin)query=query.eq('user_id',owner);if(focusId)query=query.eq('id',focusId);
       const rows=await helperQuery(query);if(!helperOwnerValid(owner,'suggestions'))return;
       list.querySelector('[data-more]')?.remove();if(!more)list.innerHTML='';
       if(!rows.length&&!loaded)list.textContent='아직 등록된 제안이 없어요.';
@@ -249,7 +251,7 @@ async function renderSuggestionsScreen(){
         card.innerHTML='<p class="helper-small">'+helperStamp(row.created_at)+' · '+escapeHtml(row.category)+' · '+escapeHtml(row.status)+'</p><div class="helper-body">'+escapeHtml(row.body)+'</div>'+(row.context?'<p class="helper-small">'+escapeHtml(row.context)+'</p>':'')+(row.reply?'<div class="helper-card helper-body"><strong>TX팀 답변</strong><br>'+escapeHtml(row.reply)+'</div>':'');
         if(admin){
           const editor=document.createElement('form');editor.innerHTML='<label>처리 상태<select name="status">'+helperOptions(helperStatuses,row.status)+'</select></label><label>답변<textarea name="reply" maxlength="3000"></textarea></label><p role="status"></p><button type="submit">답변·상태 저장</button>';editor.elements.reply.value=row.reply;
-          editor.onsubmit=async e=>{e.preventDefault();const btn=editor.querySelector('button'),msg=editor.querySelector('[role=status]');btn.disabled=true;try{await helperQuery(sb.from('helper_suggestions').update({status:editor.elements.status.value,reply:editor.elements.reply.value.trim()}).eq('id',row.id).select('id').single());msg.textContent='저장했어요.';}catch{msg.textContent=helperErrorText();}finally{btn.disabled=false;}};card.appendChild(editor);
+          editor.onsubmit=async e=>{e.preventDefault();const btn=editor.querySelector('button'),msg=editor.querySelector('[role=status]');btn.disabled=true;try{await helperQuery(sb.from('helper_suggestions').update({status:editor.elements.status.value,reply:editor.elements.reply.value.trim()}).eq('id',row.id).select('id').single());msg.textContent='저장했어요. 답변이 있으면 작성자에게 알림이 전달됩니다.';}catch{msg.textContent=helperErrorText();}finally{btn.disabled=false;}};card.appendChild(editor);
         }
         list.appendChild(card);
       });loaded+=rows.length;
