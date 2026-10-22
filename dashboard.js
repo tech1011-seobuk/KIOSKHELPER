@@ -74,7 +74,7 @@ const HelperDashboard = (() => {
   const stamp = t => new Date(t).toLocaleString('ko-KR',{timeZone:'Asia/Seoul',month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit'});
   const duration = ms => ms===null?'—':ms<60000?Math.round(ms/1000)+'초':Math.round(ms/6000)/10+'분';
   const blank = (text='선택한 조건의 기록이 아직 없어요.') => '<p class="db-empty">'+text+'</p>';
-  const table = (headers,rows,empty) => rows.length?'<div class="db-table-wrap" role="region" aria-label="'+esc(headers[0])+' 상세 표" tabindex="0"><table class="db-table"><thead><tr>'+headers.map(h=>'<th scope="col">'+h+'</th>').join('')+'</tr></thead><tbody>'+rows.map(cells=>'<tr>'+cells.map(c=>'<td>'+c+'</td>').join('')+'</tr>').join('')+'</tbody></table></div>':blank(empty);
+  const table = (headers,rows,empty) => rows.length?'<div class="db-table-wrap" role="region" aria-label="'+esc(headers[0])+' 상세 표" tabindex="0"><table class="db-table"><thead><tr>'+headers.map(h=>'<th scope="col">'+h+'</th>').join('')+'</tr></thead><tbody>'+rows.map(cells=>'<tr>'+cells.map((c,i)=>'<td data-label="'+esc(headers[i])+'">'+c+'</td>').join('')+'</tr>').join('')+'</tbody></table></div>':blank(empty);
   const panel = (title,note,content,extra='') => '<section class="db-panel '+extra+'"><div class="db-panel-title"><h2>'+title+'</h2>'+(note?'<p class="db-muted">'+note+'</p>':'')+'</div>'+content+'</section>';
   function bars(rows) {
     if(!rows.length)return blank();const max=Math.max(...rows.map(x=>x[1]),1);

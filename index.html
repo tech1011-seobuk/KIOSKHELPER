@@ -2055,6 +2055,52 @@ html[data-theme="light"] .db-dashboard{--db-success:#237b52;--db-contact:#956126
 .db-mark-unresolved{background:#e37979}
 
 /* BALANCED DASHBOARD CSS END */
+/* MOBILE EXPERIENCE START */
+.mobile-account-menu{display:none}
+@media(max-width:600px){
+ html{scroll-padding-top:16px} .app,.main,.chat-area{min-width:0;max-width:100%;box-sizing:border-box}
+ .chat-area{padding:16px 12px 28px;padding-bottom:max(28px,env(safe-area-inset-bottom))}
+ input:not([type=checkbox]):not([type=radio]),select,textarea{font-size:16px!important;box-sizing:border-box;max-width:100%}
+ #authSwitchBtn,#authAdminBtn,#authForgotBtn{min-height:44px;padding:10px 16px!important;line-height:1.5}
+ #authForm label:has(input[type=checkbox]){min-height:44px;display:flex;align-items:center;gap:10px}
+ #authForm input[type=checkbox]{width:20px;height:20px;flex-shrink:0}
+ .topbar{padding:10px 12px!important;gap:8px;position:relative}
+ .topbar-right{width:100%;gap:6px!important;align-items:center;justify-content:flex-end}
+ .topbar-right>button{min-height:44px!important;padding-left:10px;padding-right:10px;font-size:12px}
+ .mobile-account-menu{display:block;position:relative;margin-left:0}
+ .mobile-account-menu>summary{display:flex;align-items:center;justify-content:center;box-sizing:border-box;min-width:44px;min-height:44px;list-style:none;border:1px solid var(--border);border-radius:10px;padding:8px;background:var(--panel2);cursor:pointer;font-size:13px}
+ .mobile-account-menu>summary::-webkit-details-marker{display:none}
+ .mobile-account-panel{position:absolute;right:0;top:50px;z-index:100;width:min(260px,calc(100vw - 32px));box-sizing:border-box;padding:16px;background:var(--panel,#25262c);border:1px solid var(--border);border-radius:14px;box-shadow:0 8px 30px #0005;display:flex;flex-wrap:wrap;gap:12px;align-items:center}
+ .mobile-account-panel #userInfo{width:100%;order:0;font-size:13px!important;line-height:1.6;margin:0!important}
+ .mobile-account-panel #logoutBtn{min-height:44px;min-width:100px;width:auto;gap:8px}
+ .mobile-account-panel #logoutBtn:after{content:'로그아웃';font-size:13px}
+ .mobile-account-panel #themeToggle{min-height:44px}
+ .primary-navigation{padding-top:8px;margin-top:0}
+ .device-detail{padding:8px 0 24px;gap:16px}
+ .device-detail-model{height:clamp(150px,24svh,200px)}
+ .device-detail-brand{margin:14px 0 4px}.device-detail-visual h2{font-size:25px}
+ .device-detail-note{font-size:12px;margin:6px 12px 12px}
+ .device-detail .symptoms-header{padding:0 0 14px}.device-detail .symptoms-header .t2{font-size:23px}
+ .device-detail .symptom-card{min-height:56px;padding:14px;font-size:16px}
+ .model-callout-stage .model-host{height:clamp(340px,52svh,430px)}
+ .model-parts button,.replacement-navigation button,.opt-btn{min-height:48px}
+ .options-wrap{display:flex;flex-wrap:wrap;gap:10px}.options-wrap .opt-btn{flex:1 1 140px;white-space:normal;line-height:1.5}
+ .bubble{min-width:0;max-width:100%;box-sizing:border-box;overflow-wrap:anywhere;font-size:16px;line-height:1.75}
+ .bubble img,.replacement-step img,.snap-guide-card img{max-width:100%;height:auto;object-fit:contain}
+ .bubble iframe,.replacement-guide iframe{max-width:100%;aspect-ratio:16/9;height:auto}
+ .replacement-step{padding:16px}.replacement-body{font-size:16px}
+ .helper-dialog,.db-dialog{width:calc(100vw - 24px);max-width:calc(100vw - 24px);max-height:calc(100dvh - 24px);padding:18px;overflow:auto;overscroll-behavior:contain}
+ .helper-dialog button,.helper-dialog summary{min-height:44px}
+ .helper-card{overflow-wrap:anywhere;min-width:0}
+ .db-table-wrap{overflow:visible}.db-table{min-width:0;display:block}.db-table thead{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%)}
+ .db-table tbody{display:grid;gap:12px}.db-table tr{display:block;border:1px solid var(--border);border-radius:12px;padding:10px}
+ .db-table td,.db-table td:first-child,.db-table td:not(:first-child){display:flex;justify-content:space-between;gap:12px;min-width:0;max-width:none;white-space:normal;padding:9px 4px;font-size:14px;overflow-wrap:anywhere}
+ .db-table td:before{content:attr(data-label);color:var(--muted);flex:0 0 40%;font-size:12px}.db-table td:last-child{border-bottom:0}
+ .db-actions{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;width:100%}.db-actions button{font-size:13px;min-height:44px;white-space:normal}
+ .db-table td:first-child{flex-wrap:wrap}.db-table td:first-child .db-sub{width:100%;text-align:right}
+ .db-stat small,.db-muted,.db-note{font-size:12px;line-height:1.7}
+}
+/* MOBILE EXPERIENCE END */
 </style>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 <style>#endingGuideDialog label{display:flex;flex-direction:column;gap:6px;margin:14px 0}#endingGuideDialog input,#endingGuideDialog select,#endingGuideDialog textarea{box-sizing:border-box;width:100%;padding:10px;color:inherit;background:var(--panel,#24262c);border:1px solid #626773;border-radius:8px;font:inherit}#endingGuideDialog button{padding:10px;margin:6px 0;border-radius:8px;cursor:pointer}#endingGuideDialog::backdrop{background:#0009}#endingGuideDialog p{font-size:13px;line-height:1.6}</style></head>
@@ -7825,7 +7871,7 @@ const HelperDashboard = (() => {
   const stamp = t => new Date(t).toLocaleString('ko-KR',{timeZone:'Asia/Seoul',month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit'});
   const duration = ms => ms===null?'—':ms<60000?Math.round(ms/1000)+'초':Math.round(ms/6000)/10+'분';
   const blank = (text='선택한 조건의 기록이 아직 없어요.') => '<p class="db-empty">'+text+'</p>';
-  const table = (headers,rows,empty) => rows.length?'<div class="db-table-wrap" role="region" aria-label="'+esc(headers[0])+' 상세 표" tabindex="0"><table class="db-table"><thead><tr>'+headers.map(h=>'<th scope="col">'+h+'</th>').join('')+'</tr></thead><tbody>'+rows.map(cells=>'<tr>'+cells.map(c=>'<td>'+c+'</td>').join('')+'</tr>').join('')+'</tbody></table></div>':blank(empty);
+  const table = (headers,rows,empty) => rows.length?'<div class="db-table-wrap" role="region" aria-label="'+esc(headers[0])+' 상세 표" tabindex="0"><table class="db-table"><thead><tr>'+headers.map(h=>'<th scope="col">'+h+'</th>').join('')+'</tr></thead><tbody>'+rows.map(cells=>'<tr>'+cells.map((c,i)=>'<td data-label="'+esc(headers[i])+'">'+c+'</td>').join('')+'</tr>').join('')+'</tbody></table></div>':blank(empty);
   const panel = (title,note,content,extra='') => '<section class="db-panel '+extra+'"><div class="db-panel-title"><h2>'+title+'</h2>'+(note?'<p class="db-muted">'+note+'</p>':'')+'</div>'+content+'</section>';
   function bars(rows) {
     if(!rows.length)return blank();const max=Math.max(...rows.map(x=>x[1]),1);
@@ -12122,5 +12168,23 @@ if ('serviceWorker' in navigator) {
 }
 </script>
 
+<script>
+/* MOBILE ACCOUNT MENU START */
+(()=>{
+ const bar=document.querySelector('.topbar-right');if(!bar)return;
+ const nodes=['userInfo','logoutBtn','themeToggle'].map(id=>document.getElementById(id)).filter(Boolean);
+ const places=nodes.map(n=>{const marker=document.createComment('mobile-menu-anchor');n.before(marker);return marker;});
+ const menu=document.createElement('details');menu.className='mobile-account-menu';
+ const summary=document.createElement('summary');summary.textContent='메뉴';summary.setAttribute('aria-label','계정 및 화면 설정');
+ const panel=document.createElement('div');panel.className='mobile-account-panel';menu.append(summary,panel);bar.append(menu);
+ const mq=matchMedia('(max-width:600px)');
+ const sync=()=>{menu.open=false;if(mq.matches)nodes.forEach(n=>panel.append(n));else nodes.forEach((n,i)=>places[i].after(n));};
+ mq.addEventListener('change',sync);sync();
+ document.addEventListener('click',e=>{if(!menu.contains(e.target))menu.open=false;});
+ document.addEventListener('keydown',e=>{if(e.key==='Escape'&&menu.open){menu.open=false;summary.focus();}});
+ panel.addEventListener('click',e=>{if(e.target.closest('#logoutBtn'))menu.open=false;});
+})();
+/* MOBILE ACCOUNT MENU END */
+</script>
 </body>
 </html>
