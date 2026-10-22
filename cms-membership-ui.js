@@ -140,17 +140,18 @@ async function renderCmsApprovals(offset=0){
  try{
   const {members}=await cmsRequest('list',{offset});
   if(currentUser?.id!==owner||appState!=='cmsApprovals')return;
-  const wrap=document.createElement('div');wrap.className='admin-screen';
+  const wrap=document.createElement('div');wrap.className='admin-screen cms-approvals';wrap.style.cssText='width:100%;max-width:1440px;box-sizing:border-box;padding:0 16px';
   wrap.innerHTML='<div class="hub-title">회원 가입 승인</div><div class="hub-sub">CMS ID와 연결 지점을 확인한 뒤 이용을 승인해주세요.</div>';
   if(!members.length){const p=document.createElement('p');p.textContent='가입 신청이 없어요.';wrap.appendChild(p);}
+  const grid=document.createElement('div');grid.className='cms-approval-grid';grid.style.cssText='display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,300px),1fr));gap:16px;align-items:start;margin:24px 0';wrap.appendChild(grid);
   for(const m of members){
-   const card=document.createElement('section');card.style.cssText='border:1px solid var(--border);border-radius:14px;padding:20px;margin:16px 0;overflow-wrap:anywhere';
+   const card=document.createElement('section');card.style.cssText='border:1px solid var(--border);border-radius:14px;padding:20px;margin:0;min-width:0;box-sizing:border-box;overflow-wrap:anywhere';
    card.innerHTML='<h3>'+escapeHtml(m.cms_id)+'</h3><p>'+({pending:'승인 대기',approved:'승인 완료',rejected:'신청 반려'}[m.status]||'확인 필요')+' · '+escapeHtml(new Date(m.created_at).toLocaleString('ko-KR'))+'</p><details><summary>연결 지점 '+m.stores.length+'개 보기</summary><ul>'+m.stores.map(s=>'<li>'+escapeHtml(s)+'</li>').join('')+'</ul></details>';
    const status=document.createElement('p');status.setAttribute('role','status');card.appendChild(status);
    const action=(label,name)=>{const b=document.createElement('button');b.className='signup-store-option';b.textContent=label;b.style.margin='12px 8px 0 0';b.onclick=async()=>{const buttons=[...card.querySelectorAll('button')];buttons.forEach(x=>x.disabled=true);try{await cmsRequest(name,{userId:m.user_id});await renderCmsApprovals(offset);}catch(e){status.textContent=e.message;buttons.forEach(x=>x.disabled=false);}};card.appendChild(b);};
    if(m.status==='pending'){action('이용 승인','approve');action('신청 반려','reject');}
    if(m.status==='approved')action('로그인 활성화 재시도','approve');
-   wrap.appendChild(card);
+   grid.appendChild(card);
   }
   const nav=document.createElement('div');
   for(const [label,next] of [['이전',Math.max(0,offset-50)],['다음',offset+50]]){const b=document.createElement('button');b.className='signup-store-option';b.textContent=label;b.disabled=label==='이전'?offset===0:members.length<50;b.onclick=()=>renderCmsApprovals(next);nav.appendChild(b);}
