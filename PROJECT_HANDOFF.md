@@ -91,3 +91,7 @@ Remote and service-coin/settings replacements now open separately from picker, e
 
 ## 2026-10-22 Production 3D UI promotion
 Promote current staging device zoom, studio rendering, isolated equipment models, symptom detail layout and corrected back routes. Rejected continuous-canvas experiment is excluded. Keep production auth/CMS approval/dashboard/community/diagnosis content and DB unchanged. Remote and service device selection use distinct catalog views without changing saved manual keys.
+
+
+## 2026-10-22 장비 안내 아이콘
+- 교체·색감 조정 버튼에 기존 action.icon을 표시하도록 복원. 화면 이동 및 권한 변경 없음.
