@@ -88,3 +88,6 @@ Remote and service-coin/settings replacements now open separately from picker, e
 - 변경은 각 환경의 최신 코드에 적용. CMS 인증, 승인/관리자 권한, 대시보드·공지·의견, 포토이즘 안내, 서버별 설정은 보존. 별도 DB 쓰기/마이그레이션 없음.
 - 검증: 운영 175개, staging 108개 자동 검사 통과. 390px 프레임의 실제 콘텐츠 너비382/scrollWidth382, 버튼50px, 1600px 사진은308px로 축소 표시. 실제 휴대폰은 미검사. 두 서버 배포 해시/실제 화면은 outputs/snapism-organize-20261019에서 별도 확인.
 - 기술 절차 검증 과제(PC 교체 자료, 카드 결제 테스트 고정 단말기 ID, 칼라리본 원문 보류)는 UI 정돈으로 해결했다고 보지 않음.
+
+## 2026-10-22 Production 3D UI promotion
+Promote current staging device zoom, studio rendering, isolated equipment models, symptom detail layout and corrected back routes. Rejected continuous-canvas experiment is excluded. Keep production auth/CMS approval/dashboard/community/diagnosis content and DB unchanged. Remote and service device selection use distinct catalog views without changing saved manual keys.
