@@ -1,8 +1,8 @@
 /* Dashboard uses existing read-only records; it does not infer abandonment or actual support contacts. */
 const HelperDashboard = (() => {
   const DAY = 86400000, KST = 9 * 3600000;
-  const outcomes = ['solved', 'escalate', 'as', 'info'];
-  const labels = {solved:'해결 확인', escalate:'채널톡 문의 안내', as:'A/S 안내', info:'안내 확인 완료', pending:'진행 중·결과 미응답'};
+  const outcomes = ['solved', 'unresolved', 'escalate', 'as', 'info'];
+  const labels = {solved:'해결 확인', unresolved:'미해결 응답', escalate:'채널톡 문의 안내', as:'A/S 안내', info:'안내 확인 완료', pending:'진행 중·결과 미응답'};
   const esc = value => String(value ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   const pct = (n, d) => d ? Math.round(n / d * 1000) / 10 : null;
   const rate = value => value === null ? '—' : value.toLocaleString('ko-KR') + '%';
@@ -10,7 +10,7 @@ const HelperDashboard = (() => {
   const dayKey = time => new Date(time + KST).toISOString().slice(0, 10);
   const sid = value => value === 'PRT-13' ? 'PRT-7' : value;
   const groupKey = e => JSON.stringify([e.brand || '', e.device || '', sid(e.symptom_id) || '']);
-  const emptyCounts = () => ({solved:0, escalate:0, as:0, info:0, pending:0});
+  const emptyCounts = () => ({solved:0, unresolved:0, escalate:0, as:0, info:0, pending:0});
   function metadata(e) { try { const m=JSON.parse(e.detail); return m?.v === 2 && typeof m.attempt === 'string' && m.attempt.length > 0 && m.attempt.length < 100 ? m : null; } catch { return null; } }
   function isViewing(p) { return p?.role === 'demo' || (p?.role !== 'admin' && /@(?:viewers|demos|admins)\.kioskhelper\.invalid$/i.test(p?.email || '')); }
   function model(events, profiles, options = {}, now = Date.now()) {
@@ -38,12 +38,12 @@ const HelperDashboard = (() => {
     }
     const attempts=[...starts.values()].filter(a=>a.time>=since&&matches(a));
     const counts=emptyCounts();for(const a of attempts)counts[a.outcome||'pending']++;
-    const decided=counts.solved+counts.escalate+counts.as, answered=decided+counts.info;
+    const decided=counts.solved+counts.unresolved+counts.escalate+counts.as, answered=decided+counts.info;
     const stats=new Map();
     const entry=e=>{const key=groupKey(e);if(!stats.has(key))stats.set(key,{key,brand:e.brand,device:e.device,symptom_id:e.symptom_id,clicks:0,started:0,feedback:0,...emptyCounts()});return stats.get(key);};
     for(const e of period){if(e.event_type==='symptom_click'&&e.symptom_id)entry(e).clicks++;if(e.event_type==='feedback'&&e.feedback&&e.symptom_id)entry(e).feedback++;}
     for(const a of attempts){const s=entry(a);s.started++;s[a.outcome||'pending']++;}
-    const symptoms=[...stats.values()].map(s=>({...s,decided:s.solved+s.escalate+s.as,rate:pct(s.solved,s.solved+s.escalate+s.as),contactRate:pct(s.escalate,s.solved+s.escalate+s.as)})).sort((a,b)=>b.clicks-a.clicks||a.key.localeCompare(b.key));
+    const symptoms=[...stats.values()].map(s=>({...s,decided:s.solved+s.unresolved+s.escalate+s.as,rate:pct(s.solved,s.solved+s.unresolved+s.escalate+s.as),contactRate:pct(s.escalate,s.solved+s.unresolved+s.escalate+s.as)})).sort((a,b)=>b.clicks-a.clicks||a.key.localeCompare(b.key));
     const priorities=symptoms.filter(s=>s.decided>=10&&s.escalate>0).sort((a,b)=>b.contactRate-a.contactRate||b.escalate-a.escalate).slice(0,3);
     const feedback=period.filter(e=>e.event_type==='feedback'&&String(e.feedback||'').trim()).reverse();
     const legacy=period.filter(e=>e.event_type==='symptom_outcome'&&outcomes.includes(e.outcome)&&!metadata(e));
@@ -87,7 +87,7 @@ const HelperDashboard = (() => {
     const symptomCell=e=>'<strong>'+esc(title(e))+'</strong><span class="db-sub">'+esc(brandLabel(e.brand)+' · '+(e.device||'장비 미기록'))+'</span>';
     function draw(focusId) {
       const m=model(events,profiles,options), subtitle=options.audience==='all'?'관리자 활동 포함':'매장 이용 기준 · 관리자 활동 제외';
-      const defs='<details class="db-defs"><summary>집계 기준과 확인할 수 있는 범위</summary><ul><li>조치 시작·결과: 동일한 진행 기록은 마지막 결과 한 건만 집계합니다. 선택 기간에 시작한 조치 기준입니다.</li><li>해결 확인 비율 = 해결 확인 ÷ (해결 확인 + 채널톡 문의 안내 + A/S 안내). 안내 확인 완료와 미응답은 제외합니다.</li><li>결과 응답률 = 결과를 선택한 조치 ÷ 조치 시작. 안내 확인 완료를 포함합니다. 미응답을 실패나 이탈로 단정하지 않습니다.</li><li>채널톡 문의 안내는 안내 화면에 도달한 기록입니다. CMS 문의 이동은 버튼 클릭이며, 실제 상담 접수 여부는 확인하지 못합니다.</li><li>장비·증상 클릭수에는 반복 클릭이 포함됩니다. 지점은 활동 당시 기록된 지점명으로 묶습니다.</li><li>과거 기록 '+num(m.legacy.length)+'건은 중복 진행을 구분할 수 없어 별도로 표시합니다. 시간대는 한국 시간 기준입니다.</li><li>단계별 머문 시간·검색 실패·사진 부족 여부는 현재 기록만으로 확인할 수 없습니다. 스내피즘의 일부 기존 안내는 조치 결과 기록이 없어 브랜드 간 해결률을 단순 비교할 수 없습니다.</li></ul></details>';
+      const defs='<details class="db-defs"><summary>집계 기준과 확인할 수 있는 범위</summary><ul><li>조치 시작·결과: 동일한 진행 기록은 마지막 결과 한 건만 집계합니다. 선택 기간에 시작한 조치 기준입니다.</li><li>해결 확인 비율 = 해결 확인 ÷ (해결 확인 + 미해결 응답 + 채널톡 문의 안내 + A/S 안내). 안내 확인 완료와 미응답은 제외합니다.</li><li>결과 응답률 = 결과를 선택한 조치 ÷ 조치 시작. 안내 확인 완료를 포함합니다. 미응답을 실패나 이탈로 단정하지 않습니다.</li><li>채널톡 문의 안내는 안내 화면에 도달한 기록입니다. CMS 문의 이동은 버튼 클릭이며, 실제 상담 접수 여부는 확인하지 못합니다.</li><li>장비·증상 클릭수에는 반복 클릭이 포함됩니다. 지점은 활동 당시 기록된 지점명으로 묶습니다.</li><li>과거 기록 '+num(m.legacy.length)+'건은 중복 진행을 구분할 수 없어 별도로 표시합니다. 시간대는 한국 시간 기준입니다.</li><li>단계별 머문 시간·검색 실패·사진 부족 여부는 현재 기록만으로 확인할 수 없습니다. 스내피즘의 일부 기존 안내는 조치 결과 기록이 없어 브랜드 간 해결률을 단순 비교할 수 없습니다.</li></ul></details>';
       const controls='<div class="db-filters"><label>기간<select id="dbPeriod">'+[['7','최근 7일'],['30','최근 30일'],['90','최근 90일'],['all','전체 기간']].map(([v,l])=>'<option value="'+v+'"'+(options.days===v?' selected':'')+'>'+l+'</option>').join('')+'</select></label><label>브랜드<select id="dbBrand"><option value="">전체 브랜드</option><option value="photoism"'+(options.brand==='photoism'?' selected':'')+'>포토이즘</option><option value="snapism"'+(options.brand==='snapism'?' selected':'')+'>스내피즘</option></select></label><label>장비<select id="dbDevice"><option value="">전체 장비</option>'+[...new Set(events.filter(e=>e.device&&(!options.brand||e.brand===options.brand)).map(e=>e.device))].sort().map(d=>'<option value="'+esc(d)+'"'+(options.device===d?' selected':'')+'>'+esc(d)+'</option>').join('')+'</select></label><label>이용자<select id="dbAudience"><option value="members"'+(options.audience==='members'?' selected':'')+'>매장 이용만</option><option value="all"'+(options.audience==='all'?' selected':'')+'>관리자 포함</option></select></label></div>';
       const stat=(label,value,note)=>'<article class="db-stat"><span>'+label+'</span><strong>'+value+'</strong><small>'+note+'</small></article>';
       const summaries='<div class="db-stats">'+stat('이용 매장',num(m.branchRows.size)+'<em>곳</em>','활동 계정 '+num(m.activeUsers.size)+'개 · 지점 미기록 클릭 '+num(m.unknownBranch)+'회')+stat('조치 시작',num(m.attempts.length)+'<em>건</em>','중복 진행 구분이 가능한 기록 기준')+stat('해결 확인 비율',rate(m.rate),'해결 '+num(m.counts.solved)+' / 결과 확인 '+num(m.decided)+'건')+stat('결과 응답률',rate(m.responseRate),'결과 응답 '+num(m.answered)+' / 시작 '+num(m.attempts.length)+'건')+'</div>';
@@ -101,11 +101,11 @@ const HelperDashboard = (() => {
       const dailyMax=Math.max(...m.daily.map(x=>x.count),1);
       const trend='<div class="db-trend" role="img" aria-label="선택 기간 중 최근 '+m.daily.length+'일의 클릭수">'+m.daily.map((d,i)=>'<div title="'+d.day+' · '+d.count+'회"><span class="db-trend-num">'+(d.count?num(d.count):'')+'</span><div class="db-trend-space"><span style="height:'+d.count/dailyMax*100+'%"></span></div><small>'+((i%3===0||i===m.daily.length-1)?d.day.slice(5).replace('-','/'):'')+'</small></div>').join('')+'</div>';
       overview+='<div class="db-grid">'+panel('기간별 이용 추이','최근 '+m.daily.length+'일 · 장비·증상 클릭 기준 · 오늘은 현재까지',trend)+panel('브랜드별 이용','선택 기간의 장비·증상 클릭수',bars(sorted(m.brands).map(([b,n])=>[brandLabel(b),n])))+'</div>';
-      const symptomRows=m.symptoms.map(s=>[symptomCell(s),num(s.clicks),num(s.started),num(s.solved),num(s.escalate),num(s.as),num(s.info),num(s.pending),rate(s.rate),'<button type="button" data-detail="'+esc(s.key)+'">상세</button>']);
-      let symptoms=panel('증상별 이용 · 해결 결과','클릭수는 반복 조회 포함 · 조치 결과는 진행별 마지막 결과 한 건',table(['증상','클릭','시작','해결 확인','채널톡 문의 안내','A/S 안내','안내 확인 완료','진행·미응답','해결 비율','상세'],symptomRows));
+      const symptomRows=m.symptoms.map(s=>[symptomCell(s),num(s.clicks),num(s.started),num(s.solved),num(s.unresolved),num(s.escalate),num(s.as),num(s.info),num(s.pending),rate(s.rate),'<button type="button" data-detail="'+esc(s.key)+'">상세</button>']);
+      let symptoms=panel('증상별 이용 · 해결 결과','클릭수는 반복 조회 포함 · 조치 결과는 진행별 마지막 결과 한 건',table(['증상','클릭','시작','해결 확인','미해결 응답','채널톡 문의 안내','A/S 안내','안내 확인 완료','진행·미응답','해결 비율','상세'],symptomRows));
       symptoms+='<div class="db-grid">'+panel('장비별 클릭수','기존 부위·섹터별 활동',bars(sorted(m.devices).map(([k,n])=>{const [b,d]=JSON.parse(k);return [brandLabel(b)+' · '+d,n];})))+panel('해결 확인까지 걸린 시간','실제 작업 시간과 다를 수 있습니다.','<div class="db-time-value">'+duration(m.median)+'</div><p class="db-muted">중앙값 · 1시간 이내 해결 확인 '+num(m.durationCount)+'건 기준</p><div class="db-note">조치 시작부터 해결 응답까지의 시간입니다. 휴대폰을 내려놓은 시간도 포함될 수 있어요.</div>')+'</div>';
-      const legacyRows=m.legacyStats.map(s=>[symptomCell(s),num(s.total),num(s.solved),num(s.escalate),num(s.as),num(s.info),rate(pct(s.solved,s.solved+s.escalate+s.as))]);
-      symptoms+=panel('과거 결과 기록','진행 번호가 없는 이전 기록입니다. 중복 선택이 포함될 수 있으며 위의 조치 수와 합산하지 않습니다.',table(['증상','결과 기록','해결 확인','채널톡 문의 안내','A/S 안내','안내 확인 완료','해결 비율'],legacyRows));
+      const legacyRows=m.legacyStats.map(s=>[symptomCell(s),num(s.total),num(s.solved),num(s.unresolved),num(s.escalate),num(s.as),num(s.info),rate(pct(s.solved,s.solved+s.unresolved+s.escalate+s.as))]);
+      symptoms+=panel('과거 결과 기록','진행 번호가 없는 이전 기록입니다. 중복 선택이 포함될 수 있으며 위의 조치 수와 합산하지 않습니다.',table(['증상','결과 기록','해결 확인','미해결 응답','채널톡 문의 안내','A/S 안내','안내 확인 완료','해결 비율'],legacyRows));
       const recentList=m.recent.length?m.recent.slice(0,20).map(e=>'<article class="db-message"><div><strong>'+esc(title(e))+'</strong><span class="db-chip">'+labels[e.outcome]+'</span></div><p>'+esc(e.branch_name||'지점 미기록')+' · '+esc(m.people.get(e.user_id)?.display_name||'계정명 없음')+'</p><small>'+stamp(e.end)+'</small></article>').join(''):blank('최근 조치 기록에서 문의·A/S 안내 결과가 없어요.');
       const feedbackList=m.feedback.length?m.feedback.slice(0,50).map(e=>'<article class="db-message"><div><strong>'+esc(title(e))+'</strong><small>'+stamp(e.time)+'</small></div><p class="db-message-body">'+esc(e.feedback)+'</p><small>'+esc(brandLabel(e.brand)+' · '+(e.device||'장비 미기록')+' · '+(e.branch_name||'지점 미기록'))+'</small></article>').join(''):blank('아직 남겨진 의견이 없어요. 의견이 없다는 것이 불편함이 없다는 뜻은 아닙니다.');
       const feedback=panel('의견함','의견 남기기로 접수된 제안과 관리자 답변을 확인합니다.','<button type="button" id="dbSuggestionInboxBtn">접수된 의견 전체 보기 →</button>')+panel('조치 과정에서 남긴 의견',num(m.feedback.length)+'건 · 최근 50건 표시 · 원문을 확인하고 보완할 내용을 판단하세요.',feedbackList)+panel('최근 채널톡 문의·A/S 안내','새 방식의 조치 기록 · 마지막 결과 기준 최근 20건 · 실제 상담·수리 접수와 다릅니다.','<div class="db-note">CMS로 이동해 문의하기 버튼을 누른 조치: '+num(m.support)+'건 · 실제 채널톡 상담 접수 건수와 다릅니다.</div>'+recentList);

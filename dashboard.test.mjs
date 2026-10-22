@@ -64,3 +64,8 @@ test('dashboard source is included in generated page and keeps admin authorizati
  for(const id of ['cmsApprovalsBtn','accountCreateBtn','csvExportBtn'])assert.ok(html.includes('id="'+id+'"'));
  assert.match(read('package.json'),/dashboard.test.mjs/);
 });
+
+test('followup unresolved counts as an answered outcome, not a support request or pending',()=>{
+ const m=model([event('symptom_click','x'),after('symptom_outcome','x','unresolved'),event('symptom_click','y'),after('symptom_outcome','y','solved')],profiles,{},now);
+ assert.equal(m.counts.unresolved,1);assert.equal(m.counts.pending,0);assert.equal(m.counts.escalate,0);assert.equal(m.support,0);assert.equal(m.rate,50);assert.equal(m.responseRate,100);assert.equal(m.symptoms[0].rate,50);
+});

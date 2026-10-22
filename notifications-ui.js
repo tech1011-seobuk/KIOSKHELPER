@@ -63,10 +63,8 @@ async function helperOpenInbox(){
    else if(n.response){status.textContent={solved:'해결됐다고 알려주셨어요.',unresolved:'아직 해결되지 않았다고 알려주셨어요.',dismissed:'확인 요청을 닫았어요.',completed:'조치 결과가 이미 기록됐어요.'}[n.response]||'확인 완료';}
    else{
     const hint=document.createElement('p');hint.className='helper-small';hint.textContent='결과가 기록되지 않아 확인하는 알림이에요. 미해결로 판단한 것은 아닙니다.';card.appendChild(hint);
-    add('해결됐어요',async()=>{await helperInboxAction(n,'solved');draw();});
-    add('아직 해결 못했어요',async()=>{await helperInboxAction(n,'unresolved');draw();});
-    add('나중에',async()=>{await helperInboxAction(n,'later');draw();});
-    add('알림 그만 받기',async()=>{await helperInboxAction(n,'dismissed');draw();});
+    add('해결했어요',async()=>{await helperInboxAction(n,'solved');draw();});
+    add('못했어요',async()=>{await helperInboxAction(n,'unresolved');draw();});
    }
    host.appendChild(card);
   }
